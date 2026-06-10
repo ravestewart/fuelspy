@@ -1,13 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 
-// ─────────────────────────────────────────────────────────────────────────────
+// âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 // CONSTANTS
-// ─────────────────────────────────────────────────────────────────────────────
-const CKAN_BASE = 'https://www.data.qld.gov.au/api/3/action';
+// âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 const OSRM_BASE = 'https://router.project-osrm.org';
 const NOMINATIM_BASE = 'https://nominatim.openstreetmap.org';
-const QLD_PACKAGE_2026 = 'fuel-price-reporting-2026';
-const QLD_PACKAGE_2025 = 'fuel-price-reporting-2025';
 
 const DEFAULT_VEHICLES = [
   {
@@ -40,9 +37,9 @@ const DEFAULT_VEHICLES = [
 ];
 
 const FUEL_LEVELS = [
-  { label: '¼ Tank', value: 0.25, litresFn: (t: number) => t * 0.75 },
-  { label: '½ Tank', value: 0.5, litresFn: (t: number) => t * 0.5 },
-  { label: '¾ Tank', value: 0.75, litresFn: (t: number) => t * 0.25 },
+  { label: 'Â¼ Tank', value: 0.25, litresFn: (t: number) => t * 0.75 },
+  { label: 'Â½ Tank', value: 0.5, litresFn: (t: number) => t * 0.5 },
+  { label: 'Â¾ Tank', value: 0.75, litresFn: (t: number) => t * 0.25 },
   { label: 'Full', value: 1.0, litresFn: () => 0 },
 ];
 
@@ -73,9 +70,9 @@ function brandColour(brand = '') {
   return '#6b7280';
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 // MATHS & GEO
-// ─────────────────────────────────────────────────────────────────────────────
+// âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
   const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -100,9 +97,9 @@ function boundingBox(lat: number, lng: number, radiusKm: number) {
   };
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ROUTING — OSRM table (one call for N destinations), fallback to haversine×1.3
-// ─────────────────────────────────────────────────────────────────────────────
+// âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ROUTING â OSRM table (one call for N destinations), fallback to haversineÃ1.3
+// âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 async function getRouteDistances(
   originLat: number,
   originLng: number,
@@ -131,7 +128,7 @@ async function getRouteDistances(
       approx: m === null,
     }));
   } catch {
-    // Fallback: haversine × 1.3 (Brisbane road factor)
+    // Fallback: haversine Ã 1.3 (Brisbane road factor)
     return destinations.map((d: any) => ({
       km: haversineKm(originLat, originLng, d.lat, d.lng) * 1.3,
       approx: true,
@@ -139,9 +136,9 @@ async function getRouteDistances(
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// NOMINATIM — reverse geocode for suburb display
-// ─────────────────────────────────────────────────────────────────────────────
+// âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// NOMINATIM â reverse geocode for suburb display
+// âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 async function reverseGeocode(lat: number, lng: number) {
   try {
     const url = `${NOMINATIM_BASE}/reverse?lat=${lat}&lon=${lng}&format=json&zoom=14`;
@@ -158,71 +155,9 @@ async function reverseGeocode(lat: number, lng: number) {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// CKAN FETCH — latest QLD fuel price data
-// ─────────────────────────────────────────────────────────────────────────────
-async function fetchLatestResourceId(packageSlug: string) {
-  const res = await fetch(`${CKAN_BASE}/package_show?id=${packageSlug}`);
-  const data = await res.json();
-  if (!data.success) throw new Error('Package not found');
-  const active = data.result.resources.filter((r: any) => r.datastore_active);
-  if (!active.length) throw new Error('No active datastore resources');
-  return active[active.length - 1]; // latest month
-}
-
-async function fetchStations(fuelType = 'Diesel') {
-  // Try current year package, fall back to previous year
-  let resource: any;
-  try {
-    resource = await fetchLatestResourceId(QLD_PACKAGE_2026);
-  } catch {
-    resource = await fetchLatestResourceId(QLD_PACKAGE_2025);
-  }
-
-  const url =
-    `${CKAN_BASE}/datastore_search?resource_id=${resource.id}` +
-    `&filters=${encodeURIComponent(JSON.stringify({ Fuel_Type: fuelType }))}` +
-    `&limit=5000&sort=TransactionDateutc+desc`;
-
-  const res = await fetch(url);
-  const data = await res.json();
-  if (!data.success)
-    throw new Error(data.error?.message || 'CKAN fetch failed');
-
-  // Deduplicate: keep latest price change per station
-  const seen = new Map();
-  for (const r of data.result.records) {
-    if (!seen.has(r.SiteId)) {
-      seen.set(r.SiteId, {
-        id: r.SiteId,
-        name: r.Site_Name || '',
-        brand: r.Site_Brand || 'Independent',
-        address: r.Sites_Address_Line_1 || '',
-        suburb: r.Site_Suburb || '',
-        state: r.Site_State || 'QLD',
-        postcode: r.Site_Post_Code || '',
-        lat: parseFloat(r.Site_Latitude),
-        lng: parseFloat(r.Site_Longitude),
-        fuelType: r.Fuel_Type,
-        priceTenths: r.Price, // 1829 = 182.9 c/L
-        priceCPL: r.Price / 10, // cents per litre
-        priceDPL: r.Price / 1000, // dollars per litre
-        lastUpdate: r.TransactionDateutc,
-      });
-    }
-  }
-
-  return {
-    stations: Array.from(seen.values()).filter(
-      (s) => !isNaN(s.lat) && !isNaN(s.lng) && s.lat !== 0 && s.lng !== 0
-    ),
-    resourceName: resource.name,
-  };
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// LIVE API — calls Netlify proxy which reads FUELSPY_TOKEN server-side
-// ─────────────────────────────────────────────────────────────────────────────
+// âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// LIVE API â calls Netlify proxy which reads FUELSPY_TOKEN server-side
+// âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 async function fetchLiveStations(fuelType: string) {
   const res = await fetch('/api/fuelproxy', { signal: AbortSignal.timeout(15000) });
   if (!res.ok) throw new Error(`Proxy ${res.status}`);
@@ -258,20 +193,20 @@ async function fetchLiveStations(fuelType: string) {
   }
   return Array.from(seen.values()).filter(s => !isNaN(s.lat) && !isNaN(s.lng));
 }
-// ─────────────────────────────────────────────────────────────────────────────
+// âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 // HELPERS
-// ─────────────────────────────────────────────────────────────────────────────
+// âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 function fmt$(n: number) {
   return `$${n.toFixed(2)}`;
 }
 function fmtCPL(n: number) {
-  return `${n.toFixed(1)}¢`;
+  return `${n.toFixed(1)}Â¢`;
 }
 function fmtKm(n: number, approx: boolean) {
   return `${approx ? '~' : ''}${n.toFixed(1)} km`;
 }
 function fmtDate(iso: string) {
-  if (!iso) return '—';
+  if (!iso) return 'â';
   const d = new Date(iso);
   return d.toLocaleDateString('en-AU', {
     day: 'numeric',
@@ -283,15 +218,15 @@ function uid() {
   return Math.random().toString(36).slice(2, 10);
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 // SUB-COMPONENTS
-// ─────────────────────────────────────────────────────────────────────────────
+// âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 function TabBar({ tab, setTab }) {
   const tabs = [
-    { id: 'find', icon: '⛽', label: 'Find Fuel' },
-    { id: 'garage', icon: '🚗', label: 'My Garage' },
-    { id: 'settings', icon: '⚙', label: 'Settings' },
+    { id: 'find', icon: 'â½', label: 'Find Fuel' },
+    { id: 'garage', icon: 'ð', label: 'My Garage' },
+    { id: 'settings', icon: 'â', label: 'Settings' },
   ];
   return (
     <div
@@ -389,7 +324,7 @@ function StationCard({ s, rank, savings, nearestId }) {
           borderRadius: '2px',
         }}
       >
-        {isCheapest ? '★ BEST' : `#${rank + 1}`}
+        {isCheapest ? 'â BEST' : `#${rank + 1}`}
       </div>
 
       {/* Station name & suburb */}
@@ -417,7 +352,7 @@ function StationCard({ s, rank, savings, nearestId }) {
         )}
       </div>
       <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '1px' }}>
-        {s.suburb} · {s.address}
+        {s.suburb} Â· {s.address}
       </div>
 
       {/* Price + Distance row */}
@@ -529,11 +464,11 @@ function StationCard({ s, rank, savings, nearestId }) {
         >
           {savingsAmt > 0 ? (
             <span style={{ color: '#10b981' }}>
-              ▲ Save {fmt$(savingsAmt)} vs nearest servo
+              â² Save {fmt$(savingsAmt)} vs nearest servo
             </span>
           ) : (
             <span style={{ color: '#ef4444' }}>
-              ▼ {fmt$(Math.abs(savingsAmt))} more than nearest servo
+              â¼ {fmt$(Math.abs(savingsAmt))} more than nearest servo
             </span>
           )}
         </div>
@@ -782,9 +717,9 @@ function AddVehicleForm({ onSave, onCancel }) {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 // MAIN APP
-// ─────────────────────────────────────────────────────────────────────────────
+// âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 export default function FuelSpy() {
   const [tab, setTab] = useState('find');
   const [vehicles, setVehicles] = useState([]);
@@ -799,7 +734,6 @@ export default function FuelSpy() {
   const [stations, setStations] = useState([]);
   const [stationLoading, setStationLoading] = useState(false);
   const [stationError, setStationError] = useState(null);
-  const [dataLabel, setDataLabel] = useState(null);
   const [apiToken, setApiToken] = useState('');
   const [isLiveData, setIsLiveData] = useState(false);  const [hasSearched, setHasSearched] = useState(false);
   const [tokenInput, setTokenInput] = useState('');
@@ -811,7 +745,7 @@ export default function FuelSpy() {
   const selectedVehicle =
     vehicles.find((v) => v.id === selectedVehicleId) ?? vehicles[0];
 
-  // ── Load from storage on mount ───────────────────────────────────────────
+  // ââ Load from storage on mount âââââââââââââââââââââââââââââââââââââââââââ
   useEffect(() => {
     (async () => {
       try {
@@ -870,7 +804,7 @@ export default function FuelSpy() {
     })();
   }, []);
 
-  // ── Persist garage ───────────────────────────────────────────────────────
+  // ââ Persist garage âââââââââââââââââââââââââââââââââââââââââââââââââââââââ
   const saveGarage = async (newVehicles: any[]) => {
     setVehicles(newVehicles);
     try {
@@ -893,7 +827,7 @@ export default function FuelSpy() {
     setShowAddVehicle(false);
   };
 
-  // ── Persist settings ─────────────────────────────────────────────────────
+  // ââ Persist settings âââââââââââââââââââââââââââââââââââââââââââââââââââââ
   useEffect(() => {
     if (!storageReady) return;
     localStorage.setItem(
@@ -902,7 +836,7 @@ export default function FuelSpy() {
     );
   }, [radius, fuelLevel, storageReady]);
 
-  // ── Geocode suburb/postcode input via Nominatim ──────────────────────────
+  // ââ Geocode suburb/postcode input via Nominatim ââââââââââââââââââââââââââ
   const getLocation = useCallback(async () => {
     const query = locInput.trim();
     if (!query) {
@@ -935,7 +869,7 @@ export default function FuelSpy() {
     }
   }, [locInput]);
 
-  // ── GPS fallback (works outside artifact sandbox) ─────────────────────────
+  // ââ GPS fallback (works outside artifact sandbox) âââââââââââââââââââââââââ
   const getGPS = useCallback(() => {
     setLocError(null);
     setLocLoading(true);
@@ -961,7 +895,7 @@ export default function FuelSpy() {
     );
   }, []);
 
-  // ── Find stations ────────────────────────────────────────────────────────
+  // ââ Find stations ââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
   const findStations = useCallback(async () => {
     if (!location) {
       getLocation();
@@ -975,21 +909,9 @@ export default function FuelSpy() {
     setNearestId(null);
 
     try {
-      // 1. Fetch data — try live proxy first, fall back to CKAN monthly
-      let raw: any[];
-      let usedLive = false;
-      try {
-        raw = await fetchLiveStations(selectedVehicle.fuelType);
-        usedLive = true;
+      // 1. Fetch live data
+        const raw = await fetchLiveStations(selectedVehicle.fuelType);
         setIsLiveData(true);
-        setDataLabel(null);
-      } catch (liveErr) {
-        const { stations: ckanRaw, resourceName } = await fetchStations(selectedVehicle.fuelType);
-        raw = ckanRaw;
-        usedLive = false;
-        setIsLiveData(false);
-        setDataLabel(resourceName);
-      }
 
       // 2. Bounding box filter (fast), then crow-flies radius filter
       const bb = boundingBox(location.lat, location.lng, radius);
@@ -1061,7 +983,7 @@ export default function FuelSpy() {
     }
   }, [location, selectedVehicle, fuelLevel, radius, getLocation]);
 
-  // ── Save token ───────────────────────────────────────────────────────────
+  // ââ Save token âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
   const saveToken = async () => {
     setApiToken(tokenInput);
     setTokenSaved(true);
@@ -1071,9 +993,9 @@ export default function FuelSpy() {
     } catch {}
   };
 
-  // ─────────────────────────────────────────────────────────────────────────
+  // âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
   // STYLES
-  // ─────────────────────────────────────────────────────────────────────────
+  // âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
   const sectionLabel = {
     fontFamily: "'Barlow Condensed', sans-serif",
     fontSize: '11px',
@@ -1087,9 +1009,9 @@ export default function FuelSpy() {
   const nearestStation = stations.find((s) => s.id === nearestId);
   const nearestTotalCost = nearestStation?.totalCost ?? 0;
 
-  // ─────────────────────────────────────────────────────────────────────────
+  // âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
   // RENDER
-  // ─────────────────────────────────────────────────────────────────────────
+  // âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
   return (
     <>
       <link
@@ -1115,7 +1037,7 @@ export default function FuelSpy() {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '22px' }}>⛽</span>
+            <span style={{ fontSize: '22px' }}>â½</span>
             <div>
               <div
                 style={{
@@ -1150,7 +1072,7 @@ export default function FuelSpy() {
                   letterSpacing: '0.08em',
                 }}
               >
-                ● LIVE
+                â LIVE
               </div>
             )}
             {hasSearched && !isLiveData && (
@@ -1166,7 +1088,7 @@ export default function FuelSpy() {
                   letterSpacing: '0.08em',
                 }}
               >
-                ⚠ MONTHLY DATA
+                â  MONTHLY DATA
               </div>
             )}
           </div>
@@ -1177,27 +1099,9 @@ export default function FuelSpy() {
 
         {/* Content */}
         <div style={{ padding: '16px', overflowY: 'auto' }}>
-          {/* ─── FIND FUEL TAB ─────────────────────────────────────────── */}
+          {/* âââ FIND FUEL TAB âââââââââââââââââââââââââââââââââââââââââââ */}
           {tab === 'find' && (
             <div>
-              {/* Data freshness warning */}
-              {hasSearched && !isLiveData && (                <div
-                  style={{
-                    background: '#78350f22',
-                    border: '1px solid #92400e44',
-                    borderRadius: '4px',
-                    padding: '10px 12px',
-                    marginBottom: '16px',
-                    fontSize: '12px',
-                    color: '#fbbf24',
-                  }}
-                >
-                  <strong>Monthly data only.</strong> Prices are from{' '}
-                  {dataLabel || 'the latest available month'} — not live. Add
-                  your Publisher API token in Settings to enable real-time
-                  prices.
-                </div>
-              )}
 
               {/* Location */}
               <div style={{ marginBottom: '16px' }}>
@@ -1208,7 +1112,7 @@ export default function FuelSpy() {
                     value={locInput}
                     onChange={(e) => setLocInput(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && getLocation()}
-                    placeholder="Suburb or postcode…"
+                    placeholder="Suburb or postcodeâ¦"
                     style={{
                       flex: 1,
                       background: '#111827',
@@ -1238,7 +1142,7 @@ export default function FuelSpy() {
                       whiteSpace: 'nowrap',
                     }}
                   >
-                    {locLoading ? '…' : 'SEARCH'}
+                    {locLoading ? 'â¦' : 'SEARCH'}
                   </button>
                   <button
                     onClick={getGPS}
@@ -1253,7 +1157,7 @@ export default function FuelSpy() {
                       cursor: 'pointer',
                     }}
                   >
-                    📍
+                    ð
                   </button>
                 </div>
                 {location && (
@@ -1264,7 +1168,7 @@ export default function FuelSpy() {
                       color: '#10b981',
                     }}
                   >
-                    ✓{' '}
+                    â{' '}
                     {locationSuburb ||
                       `${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`}
                     <button
@@ -1283,7 +1187,7 @@ export default function FuelSpy() {
                         padding: 0,
                       }}
                     >
-                      ✕ clear
+                      â clear
                     </button>
                   </div>
                 )}
@@ -1332,11 +1236,11 @@ export default function FuelSpy() {
                     <span style={{ color: '#9ca3af' }}>
                       {selectedVehicle.tankL}L
                     </span>
-                    &nbsp;·&nbsp;Consumption:{' '}
+                    &nbsp;Â·&nbsp;Consumption:{' '}
                     <span style={{ color: '#9ca3af' }}>
                       {selectedVehicle.consumption} L/100km
                     </span>
-                    &nbsp;·&nbsp;Fuel:{' '}
+                    &nbsp;Â·&nbsp;Fuel:{' '}
                     <span style={{ color: '#9ca3af' }}>
                       {selectedVehicle.fuelType}
                     </span>
@@ -1468,7 +1372,7 @@ export default function FuelSpy() {
                 }}
               >
                 {stationLoading
-                  ? 'FINDING STATIONS…'
+                  ? 'FINDING STATIONSâ¦'
                   : location
                   ? `FIND ${
                       selectedVehicle?.fuelType?.toUpperCase() || 'DIESEL'
@@ -1524,7 +1428,7 @@ export default function FuelSpy() {
                       <span style={{ color: '#9ca3af' }}>
                         {(selectedVehicle.tankL * (1 - fuelLevel)).toFixed(1)}L
                       </span>{' '}
-                      — sorted by total cost (fill + round trip driving)
+                      â sorted by total cost (fill + round trip driving)
                     </div>
                   )}
                 </div>
@@ -1543,7 +1447,7 @@ export default function FuelSpy() {
             </div>
           )}
 
-          {/* ─── GARAGE TAB ────────────────────────────────────────────── */}
+          {/* âââ GARAGE TAB ââââââââââââââââââââââââââââââââââââââââââââââ */}
           {tab === 'garage' && (
             <div>
               <div
@@ -1617,7 +1521,7 @@ export default function FuelSpy() {
                           marginTop: '4px',
                         }}
                       >
-                        {v.fuelType} · {v.tankL}L tank · {v.consumption} L/100km
+                        {v.fuelType} Â· {v.tankL}L tank Â· {v.consumption} L/100km
                       </div>
                       <div
                         style={{
@@ -1628,7 +1532,7 @@ export default function FuelSpy() {
                       >
                         Max fill:{' '}
                         <span style={{ color: '#6b7280' }}>
-                          {v.tankL.toFixed(0)}L ({(v.tankL * 1.82).toFixed(0)}–
+                          {v.tankL.toFixed(0)}L ({(v.tankL * 1.82).toFixed(0)}â
                           {(v.tankL * 2.05).toFixed(0)} est. cost range)
                         </span>
                       </div>
@@ -1645,8 +1549,8 @@ export default function FuelSpy() {
                     >
                       <button
                         onClick={() => {
-                          setSelectedVehicleId(v.id);
-                          setTab('find');
+                   prices update in real-time.
+
                         }}
                         style={{
                           padding: '5px 10px',
@@ -1697,7 +1601,7 @@ export default function FuelSpy() {
             </div>
           )}
 
-          {/* ─── SETTINGS TAB ──────────────────────────────────────────── */}
+          {/* âââ SETTINGS TAB ââââââââââââââââââââââââââââââââââââââââââââ */}
           {tab === 'settings' && (
             <div>
               <div
@@ -1756,7 +1660,7 @@ export default function FuelSpy() {
                     type="text"
                     value={tokenInput}
                     onChange={(e) => setTokenInput(e.target.value)}
-                    placeholder="Paste your token here…"
+                    placeholder="Paste your token hereâ¦"
                     style={{
                       width: '100%',
                       background: 'none',
@@ -1787,7 +1691,7 @@ export default function FuelSpy() {
                     letterSpacing: '0.08em',
                   }}
                 >
-                  {tokenSaved ? '✓ TOKEN SAVED' : 'SAVE TOKEN'}
+                  {tokenSaved ? 'â TOKEN SAVED' : 'SAVE TOKEN'}
                 </button>
                 <div
                   style={{
@@ -1808,16 +1712,9 @@ export default function FuelSpy() {
                   >
                     CURRENT DATA SOURCE
                   </div>
-                  {apiToken ? (
                     <span style={{ color: '#10b981' }}>
-                      ● Live API (token saved)
+                      ✓ Live prices via API
                     </span>
-                  ) : (
-                    <span style={{ color: '#f59e0b' }}>
-                      ⚠ Monthly CKAN data —{' '}
-                      {dataLabel || 'latest available month'}
-                    </span>
-                  )}
                 </div>
               </div>
 
