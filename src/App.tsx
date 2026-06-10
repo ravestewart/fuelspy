@@ -12,7 +12,7 @@ const DEFAULT_VEHICLES = [
     year: 2011,
     make: 'Ford',
     model: 'Mondeo Titanium Wagon',
-    fuelType: 'Diesel',
+    fuelType: 'Diesel',h
     tankL: 70,
     consumption: 6.2,
   },
@@ -208,10 +208,12 @@ function fmtKm(n: number, approx: boolean) {
 function fmtDate(iso: string) {
   if (!iso) return '—';
   const d = new Date(iso);
-  return d.toLocaleDateString('en-AU', {
+  return d.toLocaleString('en-AU', {
     day: 'numeric',
     month: 'short',
-    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Australia/Brisbane',
   });
 }
 function uid() {
@@ -483,7 +485,7 @@ function StationCard({ s, rank, savings, nearestId }) {
           fontFamily: "'Barlow Condensed', sans-serif",
         }}
       >
-        Updated {fmtDate(s.lastUpdate)}
+        Price last changed {fmtDate(s.lastUpdate)} AEST
       </div>
     </div>
   );
