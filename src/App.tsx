@@ -231,9 +231,9 @@ async function fetchLiveStations(fuelType: string) {
   const fuelTypeMap: Record<number, string> = {};
   for (const ft of (data.fuelTypes || [])) fuelTypeMap[ft.FuelId] = ft.Name;
   const FUEL_ID_MAP: Record<string, number[]> = {
-    'Diesel': [2], 'E10': [14], 'Unleaded 91': [1], 'Premium 95': [4], 'Premium 98': [5],
+    'Diesel': [3, 14], 'E10': [12], 'Unleaded 91': [2], 'Premium 95': [5], 'Premium 98': [8],
   };
-  const targetIds = FUEL_ID_MAP[fuelType] || [2];
+  const targetIds = FUEL_ID_MAP[fuelType] || [3];
   const seen = new Map();
   for (const s of (data.stations || [])) {
     if (!targetIds.includes(s.fuelId)) continue;
