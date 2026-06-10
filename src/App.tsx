@@ -221,19 +221,43 @@ async function fetchStations(fuelType = 'Diesel') {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// LIVE API PLACEHOLDER — swap in when publisher token arrives
+// LIVE API — calls Netlify proxy which reads FUELSPY_TOKEN server-side
 // ─────────────────────────────────────────────────────────────────────────────
-// async function fetchLiveStations(token: string, fuelType: string, lat: number, lng: number, radiusKm: number) {
-//   // TODO: implement when fuelpricesqld.com.au token is received
-//   // Expected endpoint shape (TBC after token issued):
-//   //   GET https://fppdirectapi-prod.fuelpricesqld.com.au/Prices/GetSitesPrices
-//   //   Headers: Authorization: FPDAPI SubscriberToken={token}
-//   //   Params: countryId=21, geoRegionLevel=3, geoRegionId=...
-//   //
-//   // For now, throw so caller falls back to CKAN
-//   throw new Error("Live API: endpoint TBC — awaiting publisher token documentation");
-// }
-
+async function fetchLiveStations(fuelType: string) {
+  const res = await fetch('/api/fuelproxy', { signal: AbortSignal.timeout(15000) });
+  if (!res.ok) throw new Error(`Proxy ${res.status}`);
+  const data = await res.json();
+  if (data.error) throw new Error(data.error);
+  const fuelTypeMap: Record<number, string> = {};
+  for (const ft of (data.fuelTypes || [])) fuelTypeMap[ft.FuelId] = ft.Name;
+  const FUEL_ID_MAP: Record<string, number[]> = {
+    'Diesel': [2], 'E10': [14], 'Unleaded 91': [1], 'Premium 95': [4], 'Premium 98': [5],
+  };
+  const targetIds = FUEL_ID_MAP[fuelType] || [2];
+  const seen = new Map();
+  for (const s of (data.stations || [])) {
+    if (!targetIds.includes(s.fuelId)) continue;
+    if (seen.has(s.siteId)) continue;
+    if (!s.lat || !s.lng) continue;
+    seen.set(s.siteId, {
+      id: s.siteId,
+      name: s.name || s.brand || 'Station',
+      brand: s.brand || 'Independent',
+      address: s.address || '',
+      suburb: s.address || '',
+      state: 'QLD',
+      postcode: s.postcode || '',
+      lat: s.lat,
+      lng: s.lng,
+      fuelType,
+      priceTenths: s.price,
+      priceCPL: s.price / 10,
+      priceDPL: s.price / 1000,
+      lastUpdate: s.lastUpdate,
+    });
+  }
+  return Array.from(seen.values()).filter(s => !isNaN(s.lat) && !isNaN(s.lng));
+}
 // ─────────────────────────────────────────────────────────────────────────────
 // HELPERS
 // ─────────────────────────────────────────────────────────────────────────────
@@ -777,6 +801,7 @@ export default function FuelSpy() {
   const [stationError, setStationError] = useState(null);
   const [dataLabel, setDataLabel] = useState(null);
   const [apiToken, setApiToken] = useState('');
+  const [isLiveData, setIsLiveData] = useState(false);
   const [tokenInput, setTokenInput] = useState('');
   const [tokenSaved, setTokenSaved] = useState(false);
   const [showAddVehicle, setShowAddVehicle] = useState(false);
@@ -950,11 +975,21 @@ export default function FuelSpy() {
     setNearestId(null);
 
     try {
-      // 1. Fetch data
-      const { stations: raw, resourceName } = await fetchStations(
-        selectedVehicle.fuelType
-      );
-      setDataLabel(resourceName);
+      // 1. Fetch data — try live proxy first, fall back to CKAN monthly
+      let raw: any[];
+      let usedLive = false;
+      try {
+        raw = await fetchLiveStations(selectedVehicle.fuelType);
+        usedLive = true;
+        setIsLiveData(true);
+        setDataLabel(null);
+      } catch (liveErr) {
+        const { stations: ckanRaw, resourceName } = await fetchStations(selectedVehicle.fuelType);
+        raw = ckanRaw;
+        usedLive = false;
+        setIsLiveData(false);
+        setDataLabel(resourceName);
+      }
 
       // 2. Bounding box filter (fast), then crow-flies radius filter
       const bb = boundingBox(location.lat, location.lng, radius);
@@ -1102,7 +1137,7 @@ export default function FuelSpy() {
                 QLD DIESEL TRACKER
               </div>
             </div>
-            {apiToken && (
+            {isLiveData && (
               <div
                 style={{
                   marginLeft: 'auto',
@@ -1115,10 +1150,10 @@ export default function FuelSpy() {
                   letterSpacing: '0.08em',
                 }}
               >
-                ● LIVE API
+                ● LIVE
               </div>
             )}
-            {!apiToken && (
+            {!isLiveData && (
               <div
                 style={{
                   marginLeft: 'auto',
@@ -1146,8 +1181,7 @@ export default function FuelSpy() {
           {tab === 'find' && (
             <div>
               {/* Data freshness warning */}
-              {!apiToken && (
-                <div
+              {!isLiveData && (                <div
                   style={{
                     background: '#78350f22',
                     border: '1px solid #92400e44',
