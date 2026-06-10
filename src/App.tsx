@@ -1526,7 +1526,8 @@ export default function FuelSpy() {
                     >
                       <button
                         onClick={() => {
-                   prices update in real-time.
+                          setSelectedVehicleId(v.id);
+                          setTab('find');
 
                         }}
                         style={{
