@@ -801,7 +801,7 @@ export default function FuelSpy() {
   const [stationError, setStationError] = useState(null);
   const [dataLabel, setDataLabel] = useState(null);
   const [apiToken, setApiToken] = useState('');
-  const [isLiveData, setIsLiveData] = useState(false);
+  const [isLiveData, setIsLiveData] = useState(false);  const [hasSearched, setHasSearched] = useState(false);
   const [tokenInput, setTokenInput] = useState('');
   const [tokenSaved, setTokenSaved] = useState(false);
   const [showAddVehicle, setShowAddVehicle] = useState(false);
@@ -969,7 +969,7 @@ export default function FuelSpy() {
     }
     if (!selectedVehicle) return;
 
-    setStationLoading(true);
+    setHasSearched(true);      setStationLoading(true);
     setStationError(null);
     setStations([]);
     setNearestId(null);
@@ -1153,7 +1153,7 @@ export default function FuelSpy() {
                 ● LIVE
               </div>
             )}
-            {!isLiveData && (
+            {hasSearched && !isLiveData && (
               <div
                 style={{
                   marginLeft: 'auto',
@@ -1181,7 +1181,7 @@ export default function FuelSpy() {
           {tab === 'find' && (
             <div>
               {/* Data freshness warning */}
-              {!isLiveData && (                <div
+              {hasSearched && !isLiveData && (                <div
                   style={{
                     background: '#78350f22',
                     border: '1px solid #92400e44',
