@@ -40,43 +40,29 @@ export async function onRequest(context) {
     const fuelRaw = fuelTypesRes.ok ? await fuelTypesRes.json() : {};
     const brandsRaw = brandsRes.ok ? await brandsRes.json() : {};
 
+    // DEBUG: return raw keys to diagnose empty stations
+    const sitesKeys = sitesRaw && typeof sitesRaw === 'object' ? Object.keys(sitesRaw) : ['IS_ARRAY:' + Array.isArray(sitesRaw)];
+    const pricesKeys = pricesRaw && typeof pricesRaw === 'object' ? Object.keys(pricesRaw) : ['IS_ARRAY:' + Array.isArray(pricesRaw)];
     const sitesArr = toArray(sitesRaw.S ?? sitesRaw);
     const pricesArr = toArray(pricesRaw.SitePrices ?? pricesRaw);
-    const fuelArr = toArray(fuelRaw);
-    const brandsArr = toArray(brandsRaw);
+    const firstSite = sitesArr[0] ? Object.keys(sitesArr[0]) : [];
+    const firstPrice = pricesArr[0] ? Object.keys(pricesArr[0]) : [];
 
-    const siteMap = {};
-    for (const s of sitesArr) siteMap[s.SiteId] = s;
-
-    const brandMap = {};
-    for (const b of brandsArr) brandMap[b.BrandId] = b.Name;
-
-    const stations = [];
-    for (const p of pricesArr) {
-      if (p.Price === 9999) continue;
-      const site = siteMap[p.SiteId];
-      if (!site || !site.Lat || !site.Lng) continue;
-      stations.push({
-        siteId: p.SiteId,
-        fuelId: p.FuelId,
-        price: p.Price,
-        lastUpdate: p.TransactionDateUtc,
-        name: site.Name,
-        address: site.Address,
-        postcode: site.Postcode,
-        lat: site.Lat,
-        lng: site.Lng,
-        brand: brandMap[site.BrandId] ?? 'Independent'
-      });
-    }
-
-    return new Response(JSON.stringify({ stations, fuelTypes: fuelArr, timestamp: new Date().toISOString() }), {
+    return new Response(JSON.stringify({
+      debug: true,
+      sitesKeys,
+      pricesKeys,
+      sitesArrLength: sitesArr.length,
+      pricesArrLength: pricesArr.length,
+      firstSiteKeys: firstSite,
+      firstPriceKeys: firstPrice,
+      firstSite: sitesArr[0] ?? null,
+      firstPrice: pricesArr[0] ?? null
+    }), {
       status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*'
-      }
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
     });
+
   } catch (err) {
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
