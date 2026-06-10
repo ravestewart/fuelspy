@@ -734,10 +734,7 @@ export default function FuelSpy() {
   const [stations, setStations] = useState([]);
   const [stationLoading, setStationLoading] = useState(false);
   const [stationError, setStationError] = useState(null);
-  const [apiToken, setApiToken] = useState('');
   const [isLiveData, setIsLiveData] = useState(false);  const [hasSearched, setHasSearched] = useState(false);
-  const [tokenInput, setTokenInput] = useState('');
-  const [tokenSaved, setTokenSaved] = useState(false);
   const [showAddVehicle, setShowAddVehicle] = useState(false);
   const [storageReady, setStorageReady] = useState(true);
   const [nearestId, setNearestId] = useState(null);
@@ -772,18 +769,6 @@ export default function FuelSpy() {
           );
         }
 
-        // Token
-        try {
-          const t = await Promise.resolve(
-            localStorage.getItem('fuelspy-token')
-              ? { value: localStorage.getItem('fuelspy-token') }
-              : null
-          );
-          if (t?.value) {
-            setApiToken(t.value);
-            setTokenInput(t.value);
-          }
-        } catch {}
 
         // Settings
         try {
@@ -984,14 +969,6 @@ export default function FuelSpy() {
   }, [location, selectedVehicle, fuelLevel, radius, getLocation]);
 
   // ── Save token ───────────────────────────────────────────────────────────
-  const saveToken = async () => {
-    setApiToken(tokenInput);
-    setTokenSaved(true);
-    setTimeout(() => setTokenSaved(false), 2500);
-    try {
-      localStorage.setItem('fuelspy-token', tokenInput);
-    } catch {}
-  };
 
   // ─────────────────────────────────────────────────────────────────────────
   // STYLES
@@ -1614,7 +1591,7 @@ export default function FuelSpy() {
                 SETTINGS
               </div>
 
-              {/* API Token */}
+              {/* Data Source */}
               <div
                 style={{
                   background: '#111827',
@@ -1624,97 +1601,13 @@ export default function FuelSpy() {
                   marginBottom: '16px',
                 }}
               >
-                <div
-                  style={{
-                    fontWeight: 700,
-                    fontSize: '15px',
-                    color: '#f59e0b',
-                    marginBottom: '4px',
-                  }}
-                >
-                  Publisher API Token
+                <div style={{ fontWeight: 700, fontSize: '15px', color: '#f59e0b', marginBottom: '8px' }}>
+                  Data Source
                 </div>
-                <div
-                  style={{
-                    fontSize: '12px',
-                    color: '#6b7280',
-                    marginBottom: '12px',
-                    lineHeight: 1.5,
-                  }}
-                >
-                  Register at{' '}
-                  <span style={{ color: '#f59e0b' }}>fuelpricesqld.com.au</span>{' '}
-                  as a fuel price publisher to receive a real-time token. Once
-                  entered here, prices update live instead of using monthly
-                  data.
-                </div>
-                <div
-                  style={{
-                    background: '#0e1117',
-                    border: '1px solid #374151',
-                    borderRadius: '3px',
-                    padding: '4px',
-                  }}
-                >
-                  <input
-                    type="text"
-                    value={tokenInput}
-                    onChange={(e) => setTokenInput(e.target.value)}
-                    placeholder="Paste your token here…"
-                    style={{
-                      width: '100%',
-                      background: 'none',
-                      border: 'none',
-                      color: '#f3f4f6',
-                      fontFamily: "'JetBrains Mono', monospace",
-                      fontSize: '12px',
-                      padding: '8px 6px',
-                      outline: 'none',
-                      boxSizing: 'border-box',
-                    }}
-                  />
-                </div>
-                <button
-                  onClick={saveToken}
-                  style={{
-                    width: '100%',
-                    marginTop: '10px',
-                    padding: '10px',
-                    background: tokenInput ? '#f59e0b' : '#374151',
-                    border: 'none',
-                    borderRadius: '3px',
-                    color: tokenInput ? '#0e1117' : '#6b7280',
-                    fontFamily: "'Barlow Condensed', sans-serif",
-                    fontWeight: 700,
-                    fontSize: '13px',
-                    cursor: tokenInput ? 'pointer' : 'not-allowed',
-                    letterSpacing: '0.08em',
-                  }}
-                >
-                  {tokenSaved ? '✓ TOKEN SAVED' : 'SAVE TOKEN'}
-                </button>
-                <div
-                  style={{
-                    marginTop: '10px',
-                    padding: '10px',
-                    background: '#0e1117',
-                    borderRadius: '3px',
-                    fontSize: '11px',
-                    color: '#6b7280',
-                  }}
-                >
-                  <div
-                    style={{
-                      fontWeight: 700,
-                      color: '#4b5563',
-                      marginBottom: '4px',
-                    }}
-                  >
-                    CURRENT DATA SOURCE
-                  </div>
-                    <span style={{ color: '#10b981' }}>
-                      ✓ Live prices via API
-                    </span>
+                <div style={{ padding: '12px', background: '#0e1117', borderRadius: '3px', fontSize: '12px', color: '#6b7280', lineHeight: 1.6 }}>
+                  <div style={{ color: '#10b981', marginBottom: '4px' }}>● Live API connected</div>
+                  <div>Prices from Queensland Government Fuel Price Reporting Scheme.</div>
+                  <div style={{ marginTop: '6px' }}>Updated within 30 minutes of any bowser price change.</div>
                 </div>
               </div>
 
