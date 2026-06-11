@@ -1333,7 +1333,6 @@ export default function FuelSpy() {
                 </div>
               </div>
 
-              <div style={{ marginBottom: '10px' }}>
               {/* Find button */}
               <button
                 onClick={findStations}
