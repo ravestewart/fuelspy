@@ -14,7 +14,7 @@ const NOMINATIM_BASE = 'https://nominatim.openstreetmap.org';
 
 const DEFAULT_VEHICLES = [
   {
-    id: 'v1',
+    id: 'v1',h
     year: 2011,
     make: 'Ford',
     model: 'Mondeo Titanium Wagon',
@@ -137,18 +137,18 @@ function boundingBox(lat: number, lng: number, radiusKm: number) {
 const MOGGILL_FERRY_RETURN_COST = 4.00;
 const MOGGILL_EMBARK  = { lat: -27.5959, lng: 152.8579 }; // Moggill side
 const MOGGILL_DISEMB  = { lat: -27.5964, lng: 152.8487 }; // Riverview side
-const FERRY_RELEVANCE_KM = 20; // max crow-flies km from each crossing point
+const FERRY_ORIGIN_KM = 8;  // Moggill, Bellbowrie, Anstead — who actually uses the ferry
+const FERRY_DEST_KM = 5;    // Bundamba, Dinmore, Costco — servos near Riverview landing
 
 function isFerryRelevant(
   originLat: number, originLng: number,
   destLat: number,
   destLng: number
 ): boolean {
-  // Ferry helps if origin is near one bank AND destination is near the other
-  const oNearMoggill   = haversineKm(originLat, originLng, MOGGILL_EMBARK.lat,  MOGGILL_EMBARK.lng)  <= FERRY_RELEVANCE_KM;
-  const dNearRiverview = haversineKm(destLat,   destLng,   MOGGILL_DISEMB.lat, MOGGILL_DISEMB.lng) <= FERRY_RELEVANCE_KM;
-  const oNearRiverview = haversineKm(originLat, originLng, MOGGILL_DISEMB.lat, MOGGILL_DISEMB.lng) <= FERRY_RELEVANCE_KM;
-  const dNearMoggill   = haversineKm(destLat,   destLng,   MOGGILL_EMBARK.lat,  MOGGILL_EMBARK.lng)  <= FERRY_RELEVANCE_KM;
+  const oNearMoggill   = haversineKm(originLat, originLng, MOGGILL_EMBARK.lat, MOGGILL_EMBARK.lng) <= FERRY_ORIGIN_KM;
+  const dNearRiverview = haversineKm(destLat,   destLng,   MOGGILL_DISEMB.lat, MOGGILL_DISEMB.lng) <= FERRY_DEST_KM;
+  const oNearRiverview = haversineKm(originLat, originLng, MOGGILL_DISEMB.lat, MOGGILL_DISEMB.lng) <= FERRY_ORIGIN_KM;
+  const dNearMoggill   = haversineKm(destLat,   destLng,   MOGGILL_EMBARK.lat, MOGGILL_EMBARK.lng) <= FERRY_DEST_KM;
   return (oNearMoggill && dNearRiverview) || (oNearRiverview && dNearMoggill);
 }
 
