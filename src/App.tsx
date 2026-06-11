@@ -124,47 +124,6 @@ function boundingBox(lat: number, lng: number, radiusKm: number) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-// MOGGILL FERRY
-
-// Fare: $2.00/way = $4.00 return — passenger car (all three EAS vehicles <4.5t GVM)
-
-// Source: sealink.com.au/moggill/moggill-fares/ — last verified 11 June 2026
-
-// ⚠ REVIEW ANNUALLY
-
-// ─────────────────────────────────────────────────────────────────────────────
-
-const MOGGILL_FERRY_RETURN_COST = 4.00;
-const MOGGILL_EMBARK  = { lat: -27.5959, lng: 152.8579 }; // Moggill side
-const MOGGILL_DISEMB  = { lat: -27.5964, lng: 152.8487 }; // Riverview side
-const FERRY_ORIGIN_KM = 8;  // Moggill, Bellbowrie, Anstead — who actually uses the ferry
-const FERRY_DEST_KM = 5;    // Bundamba, Dinmore, Costco — servos near Riverview landing
-
-function isFerryRelevant(
-  originLat: number, originLng: number,
-  destLat: number,
-  destLng: number
-): boolean {
-  const oNearMoggill   = haversineKm(originLat, originLng, MOGGILL_EMBARK.lat, MOGGILL_EMBARK.lng) <= FERRY_ORIGIN_KM;
-  const dNearRiverview = haversineKm(destLat,   destLng,   MOGGILL_DISEMB.lat, MOGGILL_DISEMB.lng) <= FERRY_DEST_KM;
-  const oNearRiverview = haversineKm(originLat, originLng, MOGGILL_DISEMB.lat, MOGGILL_DISEMB.lng) <= FERRY_ORIGIN_KM;
-  const dNearMoggill   = haversineKm(destLat,   destLng,   MOGGILL_EMBARK.lat, MOGGILL_EMBARK.lng) <= FERRY_DEST_KM;
-  return (oNearMoggill && dNearRiverview) || (oNearRiverview && dNearMoggill);
-}
-
-function ferryRouteKm(
-  originLat: number, originLng: number,
-  destLat: number,
-  destLng: number
-): number {
-  // Drive to embarkation + crossing (0.5km) + drive from disembarkation
-  const toFerry   = haversineKm(originLat, originLng, MOGGILL_EMBARK.lat,  MOGGILL_EMBARK.lng)  * 1.2;
-  const fromFerry = haversineKm(MOGGILL_DISEMB.lat, MOGGILL_DISEMB.lng, destLat, destLng) * 1.2;
-  return toFerry + 0.5 + fromFerry;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-
 // ROUTING — OSRM table (one call for N destinations), fallback to haversine×1.3
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -561,11 +520,6 @@ function StationCard({ s, rank, savings, nearestId }) {
       </div>
 
       {/* Saving vs nearest */}
-      {(s as any).ferryApplies && (
-        <div style={{ marginTop: '6px', fontSize: '11px', color: '#93c5fd', fontFamily: "'Barlow Condensed', sans-serif" }}>
-          🚢 Via Moggill Ferry — incl. $4.00 return toll
-        </div>
-      )}
 
       {!isNearest && (
         <div
@@ -872,7 +826,6 @@ export default function FuelSpy() {
   const [showAddVehicle, setShowAddVehicle] = useState(false);
   const [storageReady, setStorageReady] = useState(true);
   const [nearestId, setNearestId] = useState(null);
-  const [allowFerry, setAllowFerry] = useState(false);
 
   const selectedVehicle =
     vehicles.find((v) => v.id === selectedVehicleId) ?? vehicles[0];
@@ -1083,21 +1036,15 @@ export default function FuelSpy() {
         const travelMins = distResults[i].durationMins ?? (roadKm / 35) * 60;
         const fillCost   = litresNeeded * s.priceDPL;
 
-        // Ferry cost override
-        const ferryApplies = allowFerry && isFerryRelevant(location.lat, location.lng, s.lat, s.lng);
-        const effectiveKm  = ferryApplies ? ferryRouteKm(location.lat, location.lng, s.lat, s.lng) : roadKm;
-        const ferryCost    = ferryApplies ? MOGGILL_FERRY_RETURN_COST : 0;
-        const driveCost    = ((effectiveKm * 2 * selectedVehicle.consumption) / 100) * s.priceDPL + ferryCost;
-
+        const driveCost    = ((roadKm * 2 * selectedVehicle.consumption) / 100) * s.priceDPL;
         return {
           ...s,
-          roadKm: effectiveKm,
-          distApprox: ferryApplies ? false : distApprox,
+          roadKm,
+          distApprox,
           travelMins,
           litresNeeded,
           fillCost,
           drivingCost: driveCost,
-          ferryApplies,
           totalCost: fillCost + driveCost,
         };
       });
@@ -1120,7 +1067,7 @@ export default function FuelSpy() {
     } finally {
       setStationLoading(false);
     }
-  }, [location, selectedVehicle, fuelLevel, maxTravelMins, allowFerry, getLocation]);
+  }, [location, selectedVehicle, fuelLevel, maxTravelMins, getLocation]);
 
   // ─────────────────────────────────────────────────────────────────────────
 
@@ -1435,41 +1382,6 @@ export default function FuelSpy() {
                 </div>
               </div>
 
-              {/* Moggill Ferry toggle */}
-              <div style={{ marginBottom: '10px' }}>
-                <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', color: '#6b7280', textTransform: 'uppercase' as const, marginBottom: '6px', fontFamily: "'Barlow Condensed', sans-serif" }}>
-                  🚢 Moggill Ferry
-                </div>
-                <div style={{ display: 'flex', borderRadius: '4px', overflow: 'hidden', border: '1px solid #374151' }}>
-                  <button
-                    onClick={() => setAllowFerry(false)}
-                    style={{
-                      flex: 1, padding: '9px', border: 'none', cursor: 'pointer',
-                      background: !allowFerry ? '#f59e0b' : '#1f2937',
-                      color: !allowFerry ? '#0e1117' : '#6b7280',
-                      fontFamily: "'Barlow Condensed', sans-serif",
-                      fontSize: '13px', fontWeight: !allowFerry ? 700 : 400,
-                      letterSpacing: '0.06em',
-                    }}
-                  >
-                    AVOID
-                  </button>
-                  <div style={{ width: '1px', background: '#374151' }} />
-                  <button
-                    onClick={() => setAllowFerry(true)}
-                    style={{
-                      flex: 1, padding: '9px', border: 'none', cursor: 'pointer',
-                      background: allowFerry ? '#f59e0b' : '#1f2937',
-                      color: allowFerry ? '#0e1117' : '#6b7280',
-                      fontFamily: "'Barlow Condensed', sans-serif",
-                      fontSize: '13px', fontWeight: allowFerry ? 700 : 400,
-                      letterSpacing: '0.06em',
-                    }}
-                  >
-                    ALLOW
-                  </button>
-                </div>
-              </div>
 
               {/* Find button */}
               <button
