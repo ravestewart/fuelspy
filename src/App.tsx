@@ -56,40 +56,6 @@ const BRAND_COLOURS = {
   woolworths: '#16a34a',
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MOGGILL FERRY
-// Fare: $2.00/way = $4.00 return — passenger car (all three EAS vehicles <4.5t GVM)
-// Source: sealink.com.au/moggill/moggill-fares/ — last verified 11 June 2026
-// ⚠ REVIEW ANNUALLY
-// ─────────────────────────────────────────────────────────────────────────────
-const MOGGILL_FERRY_RETURN_COST = 4.00;
-const MOGGILL_EMBARK  = { lat: -27.5959, lng: 152.8579 }; // Moggill side
-const MOGGILL_DISEMB  = { lat: -27.5964, lng: 152.8487 }; // Riverview side
-const FERRY_RELEVANCE_KM = 20; // max crow-flies km from each crossing point
-
-function isFerryRelevant(
-  originLat: number, originLng: number,
-  destLat: number,
-  destLng: number
-): boolean {
-  // Ferry helps if origin is near one bank AND destination is near the other
-  const oNearMoggill   = haversineKm(originLat, originLng, MOGGILL_EMBARK.lat,  MOGGILL_EMBARK.lng)  <= FERRY_RELEVANCE_KM;
-  const dNearRiverview = haversineKm(destLat,   destLng,   MOGGILL_DISEMB.lat, MOGGILL_DISEMB.lng) <= FERRY_RELEVANCE_KM;
-  const oNearRiverview = haversineKm(originLat, originLng, MOGGILL_DISEMB.lat, MOGGILL_DISEMB.lng) <= FERRY_RELEVANCE_KM;
-  const dNearMoggill   = haversineKm(destLat,   destLng,   MOGGILL_EMBARK.lat,  MOGGILL_EMBARK.lng)  <= FERRY_RELEVANCE_KM;
-  return (oNearMoggill && dNearRiverview) || (oNearRiverview && dNearMoggill);
-}
-
-function ferryRouteKm(
-  originLat: number, originLng: number,
-  destLat: number,
-  destLng: number
-): number {
-  // Drive to embarkation + crossing (0.5km) + drive from disembarkation
-  const toFerry   = haversineKm(originLat, originLng, MOGGILL_EMBARK.lat,  MOGGILL_EMBARK.lng)  * 1.2;
-  const fromFerry = haversineKm(MOGGILL_DISEMB.lat, MOGGILL_DISEMB.lng, destLat, destLng) * 1.2;
-  return toFerry + 0.5 + fromFerry;
-}
 
 function brandColour(brand = '') {
   const b = brand.toLowerCase();
@@ -124,6 +90,40 @@ function boundingBox(lat: number, lng: number, radiusKm: number) {
     minLng: lng - dLng,
     maxLng: lng + dLng,
   };
+}
+// ─────────────────────────────────────────────────────────────────────────────
+// MOGGILL FERRY
+// Fare: $2.00/way = $4.00 return — passenger car (all three EAS vehicles <4.5t GVM)
+// Source: sealink.com.au/moggill/moggill-fares/ — last verified 11 June 2026
+// ⚠ REVIEW ANNUALLY
+// ─────────────────────────────────────────────────────────────────────────────
+const MOGGILL_FERRY_RETURN_COST = 4.00;
+const MOGGILL_EMBARK  = { lat: -27.5959, lng: 152.8579 }; // Moggill side
+const MOGGILL_DISEMB  = { lat: -27.5964, lng: 152.8487 }; // Riverview side
+const FERRY_RELEVANCE_KM = 20; // max crow-flies km from each crossing point
+
+function isFerryRelevant(
+  originLat: number, originLng: number,
+  destLat: number,
+  destLng: number
+): boolean {
+  // Ferry helps if origin is near one bank AND destination is near the other
+  const oNearMoggill   = haversineKm(originLat, originLng, MOGGILL_EMBARK.lat,  MOGGILL_EMBARK.lng)  <= FERRY_RELEVANCE_KM;
+  const dNearRiverview = haversineKm(destLat,   destLng,   MOGGILL_DISEMB.lat, MOGGILL_DISEMB.lng) <= FERRY_RELEVANCE_KM;
+  const oNearRiverview = haversineKm(originLat, originLng, MOGGILL_DISEMB.lat, MOGGILL_DISEMB.lng) <= FERRY_RELEVANCE_KM;
+  const dNearMoggill   = haversineKm(destLat,   destLng,   MOGGILL_EMBARK.lat,  MOGGILL_EMBARK.lng)  <= FERRY_RELEVANCE_KM;
+  return (oNearMoggill && dNearRiverview) || (oNearRiverview && dNearMoggill);
+}
+
+function ferryRouteKm(
+  originLat: number, originLng: number,
+  destLat: number,
+  destLng: number
+): number {
+  // Drive to embarkation + crossing (0.5km) + drive from disembarkation
+  const toFerry   = haversineKm(originLat, originLng, MOGGILL_EMBARK.lat,  MOGGILL_EMBARK.lng)  * 1.2;
+  const fromFerry = haversineKm(MOGGILL_DISEMB.lat, MOGGILL_DISEMB.lng, destLat, destLng) * 1.2;
+  return toFerry + 0.5 + fromFerry;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
