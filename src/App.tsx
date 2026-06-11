@@ -1,20 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
-
 import QLD_SUBURBS from './data/qld-suburbs';
 
-// ─────────────────────────────────────────────────────────────────────────────
-
+// \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 // CONSTANTS
-
-// ─────────────────────────────────────────────────────────────────────────────
-
+// \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 const OSRM_BASE = 'https://router.project-osrm.org';
-
 const NOMINATIM_BASE = 'https://nominatim.openstreetmap.org';
 
 const DEFAULT_VEHICLES = [
   {
-    id: 'v1',h
+    id: 'v1',
     year: 2011,
     make: 'Ford',
     model: 'Mondeo Titanium Wagon',
@@ -42,6 +37,7 @@ const DEFAULT_VEHICLES = [
   },
 ];
 
+
 const FUEL_TYPES = ['Diesel', 'E10', 'Unleaded 91', 'Premium 95', 'Premium 98'];
 
 const BRAND_COLOURS = {
@@ -61,16 +57,12 @@ const BRAND_COLOURS = {
   woolworths: '#16a34a',
 };
 
-// ─────────────────────────────────────────────────────────────────────────────────
 
-// SUBURB LOOKUP — nearest suburb by GPS coordinates
-
-// Uses QLD_SUBURBS: [lat, lng, name][] — 3298 suburbs, 1km deduplicated
-
+// \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+// SUBURB LOOKUP \u2014 nearest suburb by GPS coordinates
+// Uses QLD_SUBURBS: [lat, lng, name][] \u2014 3298 suburbs, 1km deduplicated
 // Falls back to postcode string if no match found
-
-// ─────────────────────────────────────────────────────────────────────────────────
-
+// \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 function nearestSuburb(lat: number, lng: number, fallback: string): string {
   if (!lat || !lng || isNaN(lat) || isNaN(lng)) return fallback;
   let bestName = fallback;
@@ -92,12 +84,9 @@ function brandColour(brand = '') {
   return '#6b7280';
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-
+// \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 // MATHS & GEO
-
-// ─────────────────────────────────────────────────────────────────────────────
-
+// \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
   const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -121,13 +110,9 @@ function boundingBox(lat: number, lng: number, radiusKm: number) {
     maxLng: lng + dLng,
   };
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-
-// ROUTING — OSRM table (one call for N destinations), fallback to haversine×1.3
-
-// ─────────────────────────────────────────────────────────────────────────────
-
+// \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+// ROUTING \u2014 OSRM table (one call for N destinations), fallback to haversine\u00D71.3
+// \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 async function getRouteDistances(
   originLat: number,
   originLng: number,
@@ -143,16 +128,18 @@ async function getRouteDistances(
         destinations: destinations.map((d: any) => ({ lat: d.lat, lng: d.lng })),
       }),
     });
+
     if (!res.ok) throw new Error(`Routing proxy ${res.status}`);
     const data = await res.json();
     if (data.error) throw new Error(data.error);
+
     return (data.distances as number[]).map((m: number, i: number) => ({
       km: m / 1000,
       durationMins: (data.durations as number[])[i] / 60,
       approx: false,
     }));
   } catch {
-    // Fallback: haversine × 1.3, 35 km/h average
+    // Fallback: haversine \u00D7 1.3, 35 km/h average
     return destinations.map((d: any) => {
       const km = haversineKm(originLat, originLng, d.lat, d.lng) * 1.3;
       return {
@@ -164,12 +151,9 @@ async function getRouteDistances(
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-
-// NOMINATIM — reverse geocode for suburb display
-
-// ─────────────────────────────────────────────────────────────────────────────
-
+// \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+// NOMINATIM \u2014 reverse geocode for suburb display
+// \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 async function reverseGeocode(lat: number, lng: number) {
   try {
     const url = `${NOMINATIM_BASE}/reverse?lat=${lat}&lon=${lng}&format=json&zoom=14`;
@@ -186,12 +170,9 @@ async function reverseGeocode(lat: number, lng: number) {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-
-// LIVE API — calls Cloudflare Pages function which reads FUELSPY_TOKEN server-side
-
-// ─────────────────────────────────────────────────────────────────────────────
-
+// \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+// LIVE API \u2014 calls Cloudflare Pages function which reads FUELSPY_TOKEN server-side
+// \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 async function fetchLiveStations(fuelType: string) {
   const res = await fetch('/api/fuelproxy', { signal: AbortSignal.timeout(15000) });
   if (!res.ok) throw new Error(`Proxy ${res.status}`);
@@ -227,25 +208,18 @@ async function fetchLiveStations(fuelType: string) {
   }
   return Array.from(seen.values()).filter(s => !isNaN(s.lat) && !isNaN(s.lng));
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-
+// \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 // HELPERS
-
-// ─────────────────────────────────────────────────────────────────────────────
-
+// \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 function fmt$(n: number) {
   return `$${n.toFixed(2)}`;
 }
-
 function fmtCPL(n: number) {
-  return `${n.toFixed(1)}¢`;
+  return `${n.toFixed(1)}\u00A2`;
 }
-
 function fmtKm(n: number, approx: boolean) {
   return `${approx ? '~' : ''}${n.toFixed(1)} km`;
 }
-
 function fmtMins(mins: number, approx: boolean): string {
   const prefix = approx ? '~' : '';
   if (mins < 60) return `${prefix}${Math.round(mins)} min`;
@@ -253,9 +227,8 @@ function fmtMins(mins: number, approx: boolean): string {
   const m = Math.round(mins % 60);
   return m > 0 ? `${prefix}${h} hr ${m} min` : `${prefix}${h} hr`;
 }
-
 function fmtDate(iso: string) {
-  if (!iso) return '—';
+  if (!iso) return '\u2014';
   const d = new Date(iso);
   return d.toLocaleString('en-AU', {
     day: 'numeric',
@@ -265,24 +238,20 @@ function fmtDate(iso: string) {
     timeZone: 'Australia/Brisbane',
   });
 }
-
 function uid() {
   return Math.random().toString(36).slice(2, 10);
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-
+// \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 // SUB-COMPONENTS
-
-// ─────────────────────────────────────────────────────────────────────────────
+// \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 
 function TabBar({ tab, setTab }) {
   const tabs = [
-    { id: 'find', icon: '⛽', label: 'Find Fuel' },
-    { id: 'garage', icon: '🚗', label: 'My Garage' },
-    { id: 'settings', icon: '⚙', label: 'Settings' },
+    { id: 'find', icon: '\u26FD', label: 'Find Fuel' },
+    { id: 'garage', icon: '\uD83D\uDE97', label: 'My Garage' },
+    { id: 'settings', icon: '\u2699', label: 'Settings' },
   ];
-
   return (
     <div
       style={{
@@ -379,7 +348,7 @@ function StationCard({ s, rank, savings, nearestId }) {
           borderRadius: '2px',
         }}
       >
-        {isCheapest ? '★ BEST' : `#${rank + 1}`}
+        {isCheapest ? '\u2605 BEST' : `#${rank + 1}`}
       </div>
 
       {/* Station name & suburb */}
@@ -407,7 +376,7 @@ function StationCard({ s, rank, savings, nearestId }) {
         )}
       </div>
       <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '1px' }}>
-        {s.suburb} · {s.address}
+        {s.suburb} \u00B7 {s.address}
       </div>
 
       {/* Price + Distance row */}
@@ -520,7 +489,6 @@ function StationCard({ s, rank, savings, nearestId }) {
       </div>
 
       {/* Saving vs nearest */}
-
       {!isNearest && (
         <div
           style={{
@@ -531,11 +499,11 @@ function StationCard({ s, rank, savings, nearestId }) {
         >
           {savingsAmt > 0 ? (
             <span style={{ color: '#10b981' }}>
-              ▲ Save {fmt$(savingsAmt)} vs nearest servo
+              \u25B2 Save {fmt$(savingsAmt)} vs nearest servo
             </span>
           ) : (
             <span style={{ color: '#ef4444' }}>
-              ▼ {fmt$(Math.abs(savingsAmt))} more than nearest servo
+              \u25BC {fmt$(Math.abs(savingsAmt))} more than nearest servo
             </span>
           )}
         </div>
@@ -564,7 +532,7 @@ function StationCard({ s, rank, savings, nearestId }) {
             whiteSpace: 'nowrap' as const,
           }}
         >
-          🗺 DIRECTIONS
+          \uD83D\uDDFA DIRECTIONS
         </a>
       </div>
     </div>
@@ -580,12 +548,10 @@ function AddVehicleForm({ onSave, onCancel }) {
     tankL: '',
     consumption: '',
   });
-
   const set =
     (k: string) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
       setForm((f) => ({ ...f, [k]: e.target.value }));
-
   const valid =
     form.year && form.make && form.model && form.tankL && form.consumption;
 
@@ -801,12 +767,9 @@ function AddVehicleForm({ onSave, onCancel }) {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-
+// \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 // MAIN APP
-
-// ─────────────────────────────────────────────────────────────────────────────
-
+// \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 export default function FuelSpy() {
   const [tab, setTab] = useState('find');
   const [vehicles, setVehicles] = useState([]);
@@ -821,8 +784,7 @@ export default function FuelSpy() {
   const [stations, setStations] = useState([]);
   const [stationLoading, setStationLoading] = useState(false);
   const [stationError, setStationError] = useState(null);
-  const [isLiveData, setIsLiveData] = useState(false);
-  const [hasSearched, setHasSearched] = useState(false);
+  const [isLiveData, setIsLiveData] = useState(false);  const [hasSearched, setHasSearched] = useState(false);
   const [showAddVehicle, setShowAddVehicle] = useState(false);
   const [storageReady, setStorageReady] = useState(true);
   const [nearestId, setNearestId] = useState(null);
@@ -830,8 +792,7 @@ export default function FuelSpy() {
   const selectedVehicle =
     vehicles.find((v) => v.id === selectedVehicleId) ?? vehicles[0];
 
-  // ── Load from storage on mount ───────────────────────────────────────────
-
+  // \u2500\u2500 Load from storage on mount \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
   useEffect(() => {
     (async () => {
       try {
@@ -858,6 +819,7 @@ export default function FuelSpy() {
           );
         }
 
+
         // Settings
         try {
           const s = await Promise.resolve(
@@ -877,8 +839,7 @@ export default function FuelSpy() {
     })();
   }, []);
 
-  // ── Persist garage ───────────────────────────────────────────────────────
-
+  // \u2500\u2500 Persist garage \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
   const saveGarage = async (newVehicles: any[]) => {
     setVehicles(newVehicles);
     try {
@@ -901,8 +862,7 @@ export default function FuelSpy() {
     setShowAddVehicle(false);
   };
 
-  // ── Persist settings ─────────────────────────────────────────────────────
-
+  // \u2500\u2500 Persist settings \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
   useEffect(() => {
     if (!storageReady) return;
     localStorage.setItem(
@@ -911,8 +871,7 @@ export default function FuelSpy() {
     );
   }, [maxTravelMins, fuelLevel, storageReady]);
 
-  // ── Geocode suburb/postcode input via Nominatim ──────────────────────────
-
+  // \u2500\u2500 Geocode suburb/postcode input via Nominatim \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
   const getLocation = useCallback(async () => {
     const query = locInput.trim();
     if (!query) {
@@ -945,8 +904,7 @@ export default function FuelSpy() {
     }
   }, [locInput]);
 
-  // ── GPS fallback (works outside artifact sandbox) ─────────────────────────
-
+  // \u2500\u2500 GPS fallback (works outside artifact sandbox) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
   const getGPS = useCallback(() => {
     setLocError(null);
     setLocLoading(true);
@@ -972,24 +930,23 @@ export default function FuelSpy() {
     );
   }, []);
 
-  // ── Find stations ────────────────────────────────────────────────────────
-
+  // \u2500\u2500 Find stations \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
   const findStations = useCallback(async () => {
     if (!location) {
       getLocation();
       return;
     }
     if (!selectedVehicle) return;
-    setHasSearched(true);
-    setStationLoading(true);
+
+    setHasSearched(true);      setStationLoading(true);
     setStationError(null);
     setStations([]);
     setNearestId(null);
 
     try {
       // 1. Fetch live data
-      const raw = await fetchLiveStations(selectedVehicle.fuelType);
-      setIsLiveData(true);
+        const raw = await fetchLiveStations(selectedVehicle.fuelType);
+        setIsLiveData(true);
 
       // 2. Bounding box filter (fast), then crow-flies radius filter
       // Convert max travel time to crow-flies radius (generous factor for road winding)
@@ -1003,7 +960,6 @@ export default function FuelSpy() {
           s.lng < bb.maxLng &&
           haversineKm(location.lat, location.lng, s.lat, s.lng) <= crowFliesKm
       );
-
       if (!inBox.length) {
         setStationError(
           `No ${selectedVehicle.fuelType} stations found within a ${maxTravelMins}-minute drive.`
@@ -1037,6 +993,7 @@ export default function FuelSpy() {
         const fillCost   = litresNeeded * s.priceDPL;
 
         const driveCost    = ((roadKm * 2 * selectedVehicle.consumption) / 100) * s.priceDPL;
+
         return {
           ...s,
           roadKm,
@@ -1060,7 +1017,6 @@ export default function FuelSpy() {
         setStationError(`No stations found within a ${maxTravelMins}-minute drive. Try increasing the time.`);
         return;
       }
-
       setStations([...withinTime].sort((a, b) => a.totalCost - b.totalCost));
     } catch (err) {
       setStationError(`Error loading stations: ${err.message}`);
@@ -1069,12 +1025,11 @@ export default function FuelSpy() {
     }
   }, [location, selectedVehicle, fuelLevel, maxTravelMins, getLocation]);
 
-  // ─────────────────────────────────────────────────────────────────────────
+  // \u2500\u2500 Save token \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 
+  // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
   // STYLES
-
-  // ─────────────────────────────────────────────────────────────────────────
-
+  // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
   const sectionLabel = {
     fontFamily: "'Barlow Condensed', sans-serif",
     fontSize: '11px',
@@ -1088,12 +1043,9 @@ export default function FuelSpy() {
   const nearestStation = stations.find((s) => s.id === nearestId);
   const nearestTotalCost = nearestStation?.totalCost ?? 0;
 
-  // ─────────────────────────────────────────────────────────────────────────
-
+  // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
   // RENDER
-
-  // ─────────────────────────────────────────────────────────────────────────
-
+  // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
   return (
     <>
       <link
@@ -1119,7 +1071,7 @@ export default function FuelSpy() {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '22px' }}>⛽</span>
+            <span style={{ fontSize: '22px' }}>\u26FD</span>
             <div>
               <div
                 style={{
@@ -1154,7 +1106,7 @@ export default function FuelSpy() {
                   letterSpacing: '0.08em',
                 }}
               >
-                ● LIVE
+                \u25CF LIVE
               </div>
             )}
             {hasSearched && !isLiveData && (
@@ -1170,7 +1122,7 @@ export default function FuelSpy() {
                   letterSpacing: '0.08em',
                 }}
               >
-                ⚠ MONTHLY DATA
+                \u26A0 MONTHLY DATA
               </div>
             )}
           </div>
@@ -1181,10 +1133,10 @@ export default function FuelSpy() {
 
         {/* Content */}
         <div style={{ padding: '16px', overflowY: 'auto' }}>
-
-          {/* ─── FIND FUEL TAB ─────────────────────────────────────────── */}
+          {/* \u2500\u2500\u2500 FIND FUEL TAB \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */}
           {tab === 'find' && (
             <div>
+
               {/* Location */}
               <div style={{ marginBottom: '16px' }}>
                 <div style={sectionLabel}>Your Location</div>
@@ -1194,7 +1146,7 @@ export default function FuelSpy() {
                     value={locInput}
                     onChange={(e) => setLocInput(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && getLocation()}
-                    placeholder="Suburb or postcode…"
+                    placeholder="Suburb or postcode\u2026"
                     style={{
                       flex: 1,
                       background: '#111827',
@@ -1224,7 +1176,7 @@ export default function FuelSpy() {
                       whiteSpace: 'nowrap',
                     }}
                   >
-                    {locLoading ? '…' : 'SEARCH'}
+                    {locLoading ? '\u2026' : 'SEARCH'}
                   </button>
                   <button
                     onClick={getGPS}
@@ -1239,7 +1191,7 @@ export default function FuelSpy() {
                       cursor: 'pointer',
                     }}
                   >
-                    📍
+                    \uD83D\uDCCD
                   </button>
                 </div>
                 {location && (
@@ -1250,7 +1202,7 @@ export default function FuelSpy() {
                       color: '#10b981',
                     }}
                   >
-                    ✓{' '}
+                    \u2713{' '}
                     {locationSuburb ||
                       `${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`}
                     <button
@@ -1269,7 +1221,7 @@ export default function FuelSpy() {
                         padding: 0,
                       }}
                     >
-                      ✕ clear
+                      \u2715 clear
                     </button>
                   </div>
                 )}
@@ -1318,11 +1270,11 @@ export default function FuelSpy() {
                     <span style={{ color: '#9ca3af' }}>
                       {selectedVehicle.tankL}L
                     </span>
-                    &nbsp;·&nbsp;Consumption:{' '}
+                    &nbsp;\u00B7&nbsp;Consumption:{' '}
                     <span style={{ color: '#9ca3af' }}>
                       {selectedVehicle.consumption} L/100km
                     </span>
-                    &nbsp;·&nbsp;Fuel:{' '}
+                    &nbsp;\u00B7&nbsp;Fuel:{' '}
                     <span style={{ color: '#9ca3af' }}>
                       {selectedVehicle.fuelType}
                     </span>
@@ -1335,7 +1287,7 @@ export default function FuelSpy() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                   <div style={sectionLabel}>Current Fuel Level</div>
                   <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '14px', color: '#f59e0b' }}>
-                    {['Empty','⅛','¼','⅜','½','⅝','¾','⅞','Full'][Math.round(fuelLevel * 8)]}
+                    {['Empty','\u215B','\u00BC','\u215C','\u00BD','\u215D','\u00BE','\u215E','Full'][Math.round(fuelLevel * 8)]}
                     {selectedVehicle && fuelLevel < 1 && (
                       <span style={{ fontSize: '11px', color: '#9ca3af', marginLeft: '6px' }}>
                         ({(selectedVehicle.tankL * (1 - fuelLevel)).toFixed(0)}L to fill)
@@ -1353,10 +1305,9 @@ export default function FuelSpy() {
                   style={{ width: '100%', accentColor: '#f59e0b' }}
                 />
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#6b7280', marginTop: '4px' }}>
-                  <span>Empty</span><span>½</span><span>Full</span>
+                  <span>Empty</span><span>\u00BD</span><span>Full</span>
                 </div>
               </div>
-
               {/* Max Travel Time */}
               <div style={{ marginBottom: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
@@ -1382,7 +1333,8 @@ export default function FuelSpy() {
                 </div>
               </div>
 
-
+              <div style={{ marginBottom: '10px' }}>
+                <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', color: '#6b7280', textTransform: 'uppercase' as const, marginBottom: '6px', fontFamily: "'Barlow Condensed', sans-serif" }}>
               {/* Find button */}
               <button
                 onClick={findStations}
@@ -1403,7 +1355,7 @@ export default function FuelSpy() {
                 }}
               >
                 {stationLoading
-                  ? 'FINDING STATIONS…'
+                  ? 'FINDING STATIONS\u2026'
                   : location
                   ? `FIND ${
                       selectedVehicle?.fuelType?.toUpperCase() || 'DIESEL'
@@ -1459,7 +1411,7 @@ export default function FuelSpy() {
                       <span style={{ color: '#9ca3af' }}>
                         {(selectedVehicle.tankL * (1 - fuelLevel)).toFixed(1)}L
                       </span>{' '}
-                      — sorted by total cost (fill + round trip driving)
+                      \u2014 sorted by total cost (fill + round trip driving)
                     </div>
                   )}
                 </div>
@@ -1478,7 +1430,7 @@ export default function FuelSpy() {
             </div>
           )}
 
-          {/* ─── GARAGE TAB ────────────────────────────────────────────── */}
+          {/* \u2500\u2500\u2500 GARAGE TAB \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */}
           {tab === 'garage' && (
             <div>
               <div
@@ -1552,7 +1504,7 @@ export default function FuelSpy() {
                           marginTop: '4px',
                         }}
                       >
-                        {v.fuelType} · {v.tankL}L tank · {v.consumption} L/100km
+                        {v.fuelType} \u00B7 {v.tankL}L tank \u00B7 {v.consumption} L/100km
                       </div>
                       <div
                         style={{
@@ -1563,12 +1515,11 @@ export default function FuelSpy() {
                       >
                         Max fill:{' '}
                         <span style={{ color: '#6b7280' }}>
-                          {v.tankL.toFixed(0)}L ({(v.tankL * 1.82).toFixed(0)}–
+                          {v.tankL.toFixed(0)}L ({(v.tankL * 1.82).toFixed(0)}\u2013
                           {(v.tankL * 2.05).toFixed(0)} est. cost range)
                         </span>
                       </div>
                     </div>
-
                     <div
                       style={{
                         display: 'flex',
@@ -1583,6 +1534,7 @@ export default function FuelSpy() {
                         onClick={() => {
                           setSelectedVehicleId(v.id);
                           setTab('find');
+
                         }}
                         style={{
                           padding: '5px 10px',
@@ -1615,7 +1567,6 @@ export default function FuelSpy() {
                     </div>
                   </div>
                 ))}
-
                 {vehicles.length === 0 && (
                   <div
                     style={{
@@ -1634,7 +1585,7 @@ export default function FuelSpy() {
             </div>
           )}
 
-          {/* ─── SETTINGS TAB ──────────────────────────────────────────── */}
+          {/* \u2500\u2500\u2500 SETTINGS TAB \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */}
           {tab === 'settings' && (
             <div>
               <div
@@ -1661,7 +1612,7 @@ export default function FuelSpy() {
                   Data Source
                 </div>
                 <div style={{ padding: '12px', background: '#0e1117', borderRadius: '3px', fontSize: '12px', color: '#6b7280', lineHeight: 1.6 }}>
-                  <div style={{ color: '#10b981', marginBottom: '4px' }}>● Live API connected</div>
+                  <div style={{ color: '#10b981', marginBottom: '4px' }}>\u25CF Live API connected</div>
                   <div>Prices from Queensland Government Fuel Price Reporting Scheme.</div>
                   <div style={{ marginTop: '6px' }}>Updated within 30 minutes of any bowser price change.</div>
                 </div>
