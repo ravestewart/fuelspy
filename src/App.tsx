@@ -12,7 +12,7 @@ const DEFAULT_VEHICLES = [
     year: 2011,
     make: 'Ford',
     model: 'Mondeo Titanium Wagon',
-    fuelType: 'Diesel',h
+    fuelType: 'Diesel',hh
     tankL: 70,
     consumption: 6.2,
   },
@@ -297,7 +297,7 @@ function StationCard({ s, rank, savings, nearestId }) {
   const isNearest = s.id === nearestId;
   const isCheapest = rank === 0;
   const savingsAmt = savings;
-  const col = brandColour(s.brand);
+  const col = isNearest ? '#6b7280' : savings > 0 ? '#10b981' : '#ef4444';
 
   return (
     <div
