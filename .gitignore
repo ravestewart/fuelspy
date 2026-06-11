@@ -21,7 +21,4 @@ dist-ssr
 *.ntvs*
 *.njsproj
 *.sln
-*.sw?
-
-# Local Netlify folder
-.netlify
+*.sw?ify
