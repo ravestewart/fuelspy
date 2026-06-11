@@ -12,7 +12,7 @@ const DEFAULT_VEHICLES = [
     year: 2011,
     make: 'Ford',
     model: 'Mondeo Titanium Wagon',
-    fuelType: 'Diesel',hh
+    fuelType: 'Diesel',
     tankL: 70,
     consumption: 6.2,
   },
