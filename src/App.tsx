@@ -99,34 +99,36 @@ async function getRouteDistances(
   originLng: number,
   destinations: any[]
 ) {
-  // destinations: [{lat, lng}, ...]
-  // Returns: [{km, approx}, ...] in same order
   try {
     const coords = [
       `${originLng},${originLat}`,
       ...destinations.map((d: any) => `${d.lng},${d.lat}`),
     ].join(';');
-    const destIndices = destinations
-      .map((_: any, i: number) => i + 1)
-      .join(',');
-    const url = `${OSRM_BASE}/table/v1/driving/${coords}?sources=0&destinations=${destIndices}&annotations=distance`;
+    const destIndices = destinations.map((_: any, i: number) => i + 1).join(',');
+    const url = `${OSRM_BASE}/table/v1/driving/${coords}?sources=0&destinations=${destIndices}&annotations=distance,duration`;
 
     const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
     if (!res.ok) throw new Error(`OSRM ${res.status}`);
     const data = await res.json();
     if (data.code !== 'Ok') throw new Error(data.message);
 
-    // distances[0] = array of distances in metres from source 0 to each destination
-    return data.distances[0].map((m: any) => ({
-      km: m === null ? null : m / 1000,
-      approx: m === null,
-    }));
+    return data.distances[0].map((m: any, i: number) => {
+      const d = data.durations[0][i];
+      return {
+        km: m === null ? null : m / 1000,
+        durationMins: d === null ? null : d / 60,
+        approx: m === null,
+      };
+    });
   } catch {
-    // Fallback: haversine × 1.3 (Brisbane road factor)
-    return destinations.map((d: any) => ({
-      km: haversineKm(originLat, originLng, d.lat, d.lng) * 1.3,
-      approx: true,
-    }));
+    return destinations.map((d: any) => {
+      const km = haversineKm(originLat, originLng, d.lat, d.lng) * 1.3;
+      return {
+        km,
+        durationMins: (km / 35) * 60,
+        approx: true,
+      };
+    });
   }
 }
 
@@ -198,6 +200,13 @@ function fmtCPL(n: number) {
 }
 function fmtKm(n: number, approx: boolean) {
   return `${approx ? '~' : ''}${n.toFixed(1)} km`;
+}
+function fmtMins(mins: number, approx: boolean): string {
+  const prefix = approx ? '~' : '';
+  if (mins < 60) return `${prefix}${Math.round(mins)} min`;
+  const h = Math.floor(mins / 60);
+  const m = Math.round(mins % 60);
+  return m > 0 ? `${prefix}${h} hr ${m} min` : `${prefix}${h} hr`;
 }
 function fmtDate(iso: string) {
   if (!iso) return '—';
@@ -396,13 +405,24 @@ function StationCard({ s, rank, savings, nearestId }) {
           </div>
           <div
             style={{
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: '13px',
+              color: '#6b7280',
+              lineHeight: 1,
+              marginTop: '4px',
+            }}
+          >
+            {fmtMins(s.travelMins, s.distApprox)}
+          </div>
+          <div
+            style={{
               fontSize: '10px',
               color: '#6b7280',
               fontFamily: "'Barlow Condensed', sans-serif",
-              marginTop: '1px',
+              marginTop: '3px',
             }}
           >
-            {s.distApprox ? 'EST DISTANCE' : 'ROAD DISTANCE'}
+            {s.distApprox ? 'EST BY ROAD' : 'BY ROAD'}
           </div>
         </div>
       </div>
@@ -932,17 +952,16 @@ export default function FuelSpy() {
       // 5. Compute costs
       const litresNeeded = selectedVehicle.tankL * (1 - fuelLevel);
       const enriched = candidates.map((s, i) => {
-        const roadKm =
-          distResults[i].km ??
-          haversineKm(location.lat, location.lng, s.lat, s.lng) * 1.3;
+        const roadKm = distResults[i].km ?? haversineKm(location.lat, location.lng, s.lat, s.lng) * 1.3;
         const distApprox = distResults[i].approx;
+        const travelMins = distResults[i].durationMins ?? (roadKm / 35) * 60;
         const fillCost = litresNeeded * s.priceDPL;
-        const driveCost =
-          ((roadKm * 2 * selectedVehicle.consumption) / 100) * s.priceDPL;
+        const driveCost = ((roadKm * 2 * selectedVehicle.consumption) / 100) * s.priceDPL;
         return {
           ...s,
           roadKm,
           distApprox,
+          travelMins,
           litresNeeded,
           fillCost,
           drivingCost: driveCost,
