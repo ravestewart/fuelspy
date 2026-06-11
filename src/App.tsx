@@ -56,6 +56,41 @@ const BRAND_COLOURS = {
   woolworths: '#16a34a',
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// MOGGILL FERRY
+// Fare: $2.00/way = $4.00 return — passenger car (all three EAS vehicles <4.5t GVM)
+// Source: sealink.com.au/moggill/moggill-fares/ — last verified 11 June 2026
+// ⚠ REVIEW ANNUALLY
+// ─────────────────────────────────────────────────────────────────────────────
+const MOGGILL_FERRY_RETURN_COST = 4.00;
+const MOGGILL_EMBARK  = { lat: -27.5959, lng: 152.8579 }; // Moggill side
+const MOGGILL_DISEMB  = { lat: -27.5964, lng: 152.8487 }; // Riverview side
+const FERRY_RELEVANCE_KM = 20; // max crow-flies km from each crossing point
+
+function isFerryRelevant(
+  originLat: number, originLng: number,
+  destLat: number,
+  destLng: number
+): boolean {
+  // Ferry helps if origin is near one bank AND destination is near the other
+  const oNearMoggill   = haversineKm(originLat, originLng, MOGGILL_EMBARK.lat,  MOGGILL_EMBARK.lng)  <= FERRY_RELEVANCE_KM;
+  const dNearRiverview = haversineKm(destLat,   destLng,   MOGGILL_DISEMB.lat, MOGGILL_DISEMB.lng) <= FERRY_RELEVANCE_KM;
+  const oNearRiverview = haversineKm(originLat, originLng, MOGGILL_DISEMB.lat, MOGGILL_DISEMB.lng) <= FERRY_RELEVANCE_KM;
+  const dNearMoggill   = haversineKm(destLat,   destLng,   MOGGILL_EMBARK.lat,  MOGGILL_EMBARK.lng)  <= FERRY_RELEVANCE_KM;
+  return (oNearMoggill && dNearRiverview) || (oNearRiverview && dNearMoggill);
+}
+
+function ferryRouteKm(
+  originLat: number, originLng: number,
+  destLat: number,
+  destLng: number
+): number {
+  // Drive to embarkation + crossing (0.5km) + drive from disembarkation
+  const toFerry   = haversineKm(originLat, originLng, MOGGILL_EMBARK.lat,  MOGGILL_EMBARK.lng)  * 1.2;
+  const fromFerry = haversineKm(MOGGILL_DISEMB.lat, MOGGILL_DISEMB.lng, destLat, destLng) * 1.2;
+  return toFerry + 0.5 + fromFerry;
+}
+
 function brandColour(brand = '') {
   const b = brand.toLowerCase();
   for (const [key, col] of Object.entries(BRAND_COLOURS)) {
@@ -470,10 +505,15 @@ function StationCard({ s, rank, savings, nearestId }) {
       </div>
 
       {/* Saving vs nearest */}
+      {(s as any).ferryApplies && (
+        <div style={{ marginTop: '6px', fontSize: '11px', color: '#93c5fd', fontFamily: "'Barlow Condensed', sans-serif" }}>
+          🚢 Via Moggill Ferry — incl. $4.00 return toll
+        </div>
+      )}
       {!isNearest && (
         <div
           style={{
-            marginTop: '8px',
+            marginTop: '4px',
             fontSize: '12px',
             fontFamily: "'Barlow Condensed', sans-serif",
           }}
@@ -754,6 +794,7 @@ export default function FuelSpy() {
   const [showAddVehicle, setShowAddVehicle] = useState(false);
   const [storageReady, setStorageReady] = useState(true);
   const [nearestId, setNearestId] = useState(null);
+  const [allowFerry, setAllowFerry] = useState(false);
 
   const selectedVehicle =
     vehicles.find((v) => v.id === selectedVehicleId) ?? vehicles[0];
@@ -952,19 +993,26 @@ export default function FuelSpy() {
       // 5. Compute costs
       const litresNeeded = selectedVehicle.tankL * (1 - fuelLevel);
       const enriched = candidates.map((s, i) => {
-        const roadKm = distResults[i].km ?? haversineKm(location.lat, location.lng, s.lat, s.lng) * 1.3;
+        const roadKm    = distResults[i].km ?? haversineKm(location.lat, location.lng, s.lat, s.lng) * 1.3;
         const distApprox = distResults[i].approx;
         const travelMins = distResults[i].durationMins ?? (roadKm / 35) * 60;
-        const fillCost = litresNeeded * s.priceDPL;
-        const driveCost = ((roadKm * 2 * selectedVehicle.consumption) / 100) * s.priceDPL;
+        const fillCost   = litresNeeded * s.priceDPL;
+
+        // Ferry cost override
+        const ferryApplies = allowFerry && isFerryRelevant(location.lat, location.lng, s.lat, s.lng);
+        const effectiveKm  = ferryApplies ? ferryRouteKm(location.lat, location.lng, s.lat, s.lng) : roadKm;
+        const ferryCost    = ferryApplies ? MOGGILL_FERRY_RETURN_COST : 0;
+        const driveCost    = ((effectiveKm * 2 * selectedVehicle.consumption) / 100) * s.priceDPL + ferryCost;
+
         return {
           ...s,
-          roadKm,
-          distApprox,
+          roadKm: effectiveKm,
+          distApprox: ferryApplies ? false : distApprox,
           travelMins,
           litresNeeded,
           fillCost,
           drivingCost: driveCost,
+          ferryApplies,
           totalCost: fillCost + driveCost,
         };
       });
@@ -1318,6 +1366,41 @@ export default function FuelSpy() {
                 </div>
               </div>
 
+              {/* Moggill Ferry toggle */}
+              <button
+                onClick={() => setAllowFerry(f => !f)}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  marginBottom: '10px',
+                  background: allowFerry ? '#1e3a5f' : '#1f2937',
+                  border: `1px solid ${allowFerry ? '#3b82f6' : '#374151'}`,
+                  borderRadius: '4px',
+                  color: allowFerry ? '#93c5fd' : '#6b7280',
+                  fontFamily: "'Barlow Condensed', sans-serif",
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  letterSpacing: '0.05em',
+                  textAlign: 'left' as const,
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
+                <span>🚢 Moggill Ferry</span>
+                <span style={{
+                  background: allowFerry ? '#3b82f6' : '#374151',
+                  color: allowFerry ? '#fff' : '#9ca3af',
+                  padding: '2px 10px',
+                  borderRadius: '3px',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  letterSpacing: '0.08em',
+                }}>
+                  {allowFerry ? 'ALLOW' : 'AVOID'}
+                </span>
+              </button>
               {/* Find button */}
               <button
                 onClick={findStations}
