@@ -36,12 +36,6 @@ const DEFAULT_VEHICLES = [
   },
 ];
 
-const FUEL_LEVELS = [
-  { label: '¼ Tank', value: 0.25, litresFn: (t: number) => t * 0.75 },
-  { label: '½ Tank', value: 0.5, litresFn: (t: number) => t * 0.5 },
-  { label: '¾ Tank', value: 0.75, litresFn: (t: number) => t * 0.25 },
-  { label: 'Full', value: 1.0, litresFn: () => 0 },
-];
 
 const FUEL_TYPES = ['Diesel', 'E10', 'Unleaded 91', 'Premium 95', 'Premium 98'];
 
@@ -1229,56 +1223,30 @@ export default function FuelSpy() {
 
               {/* Fuel level */}
               <div style={{ marginBottom: '16px' }}>
-                <div style={sectionLabel}>Current Fuel Level</div>
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(4, 1fr)',
-                    gap: '6px',
-                  }}
-                >
-                  {FUEL_LEVELS.map((fl) => (
-                    <button
-                      key={fl.value}
-                      onClick={() => setFuelLevel(fl.value)}
-                      style={{
-                        padding: '10px 6px',
-                        background:
-                          fuelLevel === fl.value ? '#f59e0b' : '#1f2937',
-                        border: `1px solid ${
-                          fuelLevel === fl.value ? '#f59e0b' : '#374151'
-                        }`,
-                        borderRadius: '4px',
-                        color: fuelLevel === fl.value ? '#0e1117' : '#9ca3af',
-                        fontFamily: "'Barlow Condensed', sans-serif",
-                        fontSize: '14px',
-                        fontWeight: fuelLevel === fl.value ? 700 : 400,
-                        cursor: 'pointer',
-                        textAlign: 'center',
-                      }}
-                    >
-                      <div>{fl.label}</div>
-                      {selectedVehicle && (
-                        <div
-                          style={{
-                            fontSize: '10px',
-                            marginTop: '2px',
-                            opacity: 0.8,
-                          }}
-                        >
-                          {fl.value === 1
-                            ? 'Full'
-                            : `${(
-                                selectedVehicle.tankL *
-                                (1 - fl.value)
-                              ).toFixed(0)}L`}
-                        </div>
-                      )}
-                    </button>
-                  ))}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <div style={sectionLabel}>Current Fuel Level</div>
+                  <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '14px', color: '#f59e0b' }}>
+                    {['Empty','⅛','¼','⅜','½','⅝','¾','⅞','Full'][Math.round(fuelLevel * 8)]}
+                    {selectedVehicle && fuelLevel < 1 && (
+                      <span style={{ fontSize: '11px', color: '#9ca3af', marginLeft: '6px' }}>
+                        ({(selectedVehicle.tankL * (1 - fuelLevel)).toFixed(0)}L to fill)
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="8"
+                  step="1"
+                  value={Math.round(fuelLevel * 8)}
+                  onChange={(e) => setFuelLevel(Number(e.target.value) / 8)}
+                  style={{ width: '100%', accentColor: '#f59e0b' }}
+                />
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#6b7280', marginTop: '4px' }}>
+                  <span>Empty</span><span>½</span><span>Full</span>
                 </div>
               </div>
-
               {/* Radius */}
               <div style={{ marginBottom: '20px' }}>
                 <div
