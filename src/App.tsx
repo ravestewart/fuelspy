@@ -376,7 +376,7 @@ function StationCard({ s, rank, savings, nearestId }) {
         )}
       </div>
       <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '1px' }}>
-        {s.suburb} \u00B7 {s.address}
+        {s.suburb}{' \u00B7 '}{s.address}
       </div>
 
       {/* Price + Distance row */}
@@ -499,11 +499,11 @@ function StationCard({ s, rank, savings, nearestId }) {
         >
           {savingsAmt > 0 ? (
             <span style={{ color: '#10b981' }}>
-              \u25B2 Save {fmt$(savingsAmt)} vs nearest servo
+              {'\u25B2'} Save {fmt$(savingsAmt)} vs nearest servo
             </span>
           ) : (
             <span style={{ color: '#ef4444' }}>
-              \u25BC {fmt$(Math.abs(savingsAmt))} more than nearest servo
+              {'\u25BC'} {fmt$(Math.abs(savingsAmt))} more than nearest servo
             </span>
           )}
         </div>
@@ -532,7 +532,7 @@ function StationCard({ s, rank, savings, nearestId }) {
             whiteSpace: 'nowrap' as const,
           }}
         >
-          \uD83D\uDDFA DIRECTIONS
+          {'\uD83D\uDDFA'} DIRECTIONS
         </a>
       </div>
     </div>
@@ -1071,7 +1071,7 @@ export default function FuelSpy() {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '22px' }}>\u26FD</span>
+            <span style={{ fontSize: '22px' }}>{'\u26FD'}</span>
             <div>
               <div
                 style={{
@@ -1106,7 +1106,7 @@ export default function FuelSpy() {
                   letterSpacing: '0.08em',
                 }}
               >
-                \u25CF LIVE
+                {'\u25CF'} LIVE
               </div>
             )}
             {hasSearched && !isLiveData && (
@@ -1122,7 +1122,7 @@ export default function FuelSpy() {
                   letterSpacing: '0.08em',
                 }}
               >
-                \u26A0 MONTHLY DATA
+                {'\u26A0'} MONTHLY DATA
               </div>
             )}
           </div>
@@ -1146,7 +1146,7 @@ export default function FuelSpy() {
                     value={locInput}
                     onChange={(e) => setLocInput(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && getLocation()}
-                    placeholder="Suburb or postcode\u2026"
+                    placeholder={'Suburb or postcode\u2026'}
                     style={{
                       flex: 1,
                       background: '#111827',
@@ -1191,7 +1191,7 @@ export default function FuelSpy() {
                       cursor: 'pointer',
                     }}
                   >
-                    \uD83D\uDCCD
+                    {'\uD83D\uDCCD'}
                   </button>
                 </div>
                 {location && (
@@ -1202,7 +1202,7 @@ export default function FuelSpy() {
                       color: '#10b981',
                     }}
                   >
-                    \u2713{' '}
+                    {'\u2713'}{' '}
                     {locationSuburb ||
                       `${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`}
                     <button
@@ -1221,7 +1221,7 @@ export default function FuelSpy() {
                         padding: 0,
                       }}
                     >
-                      \u2715 clear
+                      {'\u2715'} clear
                     </button>
                   </div>
                 )}
@@ -1270,11 +1270,11 @@ export default function FuelSpy() {
                     <span style={{ color: '#9ca3af' }}>
                       {selectedVehicle.tankL}L
                     </span>
-                    &nbsp;\u00B7&nbsp;Consumption:{' '}
+                    &nbsp;{'\u00B7'}&nbsp;Consumption:{' '}
                     <span style={{ color: '#9ca3af' }}>
                       {selectedVehicle.consumption} L/100km
                     </span>
-                    &nbsp;\u00B7&nbsp;Fuel:{' '}
+                    &nbsp;{'\u00B7'}&nbsp;Fuel:{' '}
                     <span style={{ color: '#9ca3af' }}>
                       {selectedVehicle.fuelType}
                     </span>
@@ -1305,7 +1305,7 @@ export default function FuelSpy() {
                   style={{ width: '100%', accentColor: '#f59e0b' }}
                 />
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#6b7280', marginTop: '4px' }}>
-                  <span>Empty</span><span>\u00BD</span><span>Full</span>
+                  <span>Empty</span><span>{'\u00BD'}</span><span>Full</span>
                 </div>
               </div>
               {/* Max Travel Time */}
@@ -1409,7 +1409,7 @@ export default function FuelSpy() {
                       <span style={{ color: '#9ca3af' }}>
                         {(selectedVehicle.tankL * (1 - fuelLevel)).toFixed(1)}L
                       </span>{' '}
-                      \u2014 sorted by total cost (fill + round trip driving)
+                      {'\u2014'} sorted by total cost (fill + round trip driving)
                     </div>
                   )}
                 </div>
@@ -1502,7 +1502,7 @@ export default function FuelSpy() {
                           marginTop: '4px',
                         }}
                       >
-                        {v.fuelType} \u00B7 {v.tankL}L tank \u00B7 {v.consumption} L/100km
+                        {v.fuelType}{' \u00B7 '}{v.tankL}L tank{' \u00B7 '}{v.consumption} L/100km
                       </div>
                       <div
                         style={{
@@ -1513,7 +1513,7 @@ export default function FuelSpy() {
                       >
                         Max fill:{' '}
                         <span style={{ color: '#6b7280' }}>
-                          {v.tankL.toFixed(0)}L ({(v.tankL * 1.82).toFixed(0)}\u2013
+                          {v.tankL.toFixed(0)}L ({(v.tankL * 1.82).toFixed(0)}{'\u2013'}
                           {(v.tankL * 2.05).toFixed(0)} est. cost range)
                         </span>
                       </div>
@@ -1610,7 +1610,7 @@ export default function FuelSpy() {
                   Data Source
                 </div>
                 <div style={{ padding: '12px', background: '#0e1117', borderRadius: '3px', fontSize: '12px', color: '#6b7280', lineHeight: 1.6 }}>
-                  <div style={{ color: '#10b981', marginBottom: '4px' }}>\u25CF Live API connected</div>
+                  <div style={{ color: '#10b981', marginBottom: '4px' }}>{'\u25CF'} Live API connected</div>
                   <div>Prices from Queensland Government Fuel Price Reporting Scheme.</div>
                   <div style={{ marginTop: '6px' }}>Updated within 30 minutes of any bowser price change.</div>
                 </div>
