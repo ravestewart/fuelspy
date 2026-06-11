@@ -1029,7 +1029,7 @@ export default function FuelSpy() {
     } finally {
       setStationLoading(false);
     }
-  }, [location, selectedVehicle, fuelLevel, radius, getLocation]);
+  }, [location, selectedVehicle, fuelLevel, radius, allowFerry, getLocation]);
 
   // ── Save token ───────────────────────────────────────────────────────────
 
