@@ -100,27 +100,27 @@ async function getRouteDistances(
   destinations: any[]
 ) {
   try {
-    const coords = [
-      `${originLng},${originLat}`,
-      ...destinations.map((d: any) => `${d.lng},${d.lat}`),
-    ].join(';');
-    const destIndices = destinations.map((_: any, i: number) => i + 1).join(',');
-    const url = `${OSRM_BASE}/table/v1/driving/${coords}?sources=0&destinations=${destIndices}&annotations=distance,duration`;
-
-    const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
-    if (!res.ok) throw new Error(`OSRM ${res.status}`);
-    const data = await res.json();
-    if (data.code !== 'Ok') throw new Error(data.message);
-
-    return data.distances[0].map((m: any, i: number) => {
-      const d = data.durations[0][i];
-      return {
-        km: m === null ? null : m / 1000,
-        durationMins: d === null ? null : d / 60,
-        approx: m === null,
-      };
+    const res = await fetch('/api/routematrix', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: AbortSignal.timeout(10000),
+      body: JSON.stringify({
+        origin: { lat: originLat, lng: originLng },
+        destinations: destinations.map((d: any) => ({ lat: d.lat, lng: d.lng })),
+      }),
     });
+
+    if (!res.ok) throw new Error(`Routing proxy ${res.status}`);
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+
+    return (data.distances as number[]).map((m: number, i: number) => ({
+      km: m / 1000,
+      durationMins: (data.durations as number[])[i] / 60,
+      approx: false,
+    }));
   } catch {
+    // Fallback: haversine × 1.3, 35 km/h average
     return destinations.map((d: any) => {
       const km = haversineKm(originLat, originLng, d.lat, d.lng) * 1.3;
       return {
