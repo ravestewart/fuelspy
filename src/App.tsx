@@ -1334,7 +1334,6 @@ export default function FuelSpy() {
               </div>
 
               <div style={{ marginBottom: '10px' }}>
-                <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', color: '#6b7280', textTransform: 'uppercase' as const, marginBottom: '6px', fontFamily: "'Barlow Condensed', sans-serif" }}>
               {/* Find button */}
               <button
                 onClick={findStations}
