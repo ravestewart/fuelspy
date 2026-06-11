@@ -14,7 +14,7 @@ const DEFAULT_VEHICLES = [
     make: 'Ford',
     model: 'Mondeo Titanium Wagon',
     fuelType: 'Diesel',
-    tankL: 70,
+    tankL: 70,h
     consumption: 6.2,
   },
   {
@@ -871,7 +871,7 @@ export default function FuelSpy() {
           if (s?.value) {
             const settings = JSON.parse(s.value);
             if (settings.maxTravelMins) setMaxTravelMins(settings.maxTravelMins);
-            if (settings.fuelLevel) setFuelLevel(settings.fuelLevel);
+            if (settings.fuelLevel) setFuelLevel(settings.fuelLevel);h
           }
         } catch {}
       } finally {
@@ -993,7 +993,7 @@ export default function FuelSpy() {
       // Convert max travel time to crow-flies radius (generous factor for road winding)
       const crowFliesKm = (maxTravelMins / 60) * 35 * 1.5;
       const bb = boundingBox(location.lat, location.lng, crowFliesKm);
-      const inBox = result.stations.filter(
+      const inBox = raw.filter(
         (s) =>
           s.lat > bb.minLat &&
           s.lat < bb.maxLat &&
