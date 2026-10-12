@@ -143,7 +143,7 @@ export default function TripTab(props: {
       // 3. Detours, in lower-bound order, 25 per call, at most 4 calls; stop early when no better total is possible.
       setStage('Checking detours…');
       const kept: Result[] = [];
-      let best: number | null = null, checked = 0, calls = 0, stopped = false;
+      let best: number | null = null, checked = 0, calls = 0, stopped = false, unrouted = 0;
       for (let i = 0; i < corridor.length; i += LEGS_PER_CALL) {
         if (shouldStop(corridor[i].bound, best, fullTank)) { stopped = true; break; }
         if (calls >= MAX_CALLS) break;
@@ -163,6 +163,7 @@ export default function TripTab(props: {
           break;
         }
         checked += batch.length;
+        unrouted += d.unresolved || 0;
         batch.forEach(({ s, eff }, k) => {
           const det = d.detours[k];
           if (!det) return;
@@ -175,6 +176,7 @@ export default function TripTab(props: {
       }
       const ranOut = !stopped && checked < corridor.length;
       if (ranOut) setCheckedLabel(`best of ${checked} checked`);
+      if (unrouted) setNote(`${unrouted} servo${unrouted === 1 ? '' : 's'} couldn't be routed and ${unrouted === 1 ? 'was' : 'were'} skipped.`);
       if (!kept.length) {
         setError(ranOut ? `No servo in the ${checked} checked is within ${limitText} — try a bigger detour.` : `No servos within ${limitText} of your route — try a bigger detour.`);
         return;
