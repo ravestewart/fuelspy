@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import QLD_SUBURBS from './data/qld-suburbs';
+import TripTab from './Trip';
+import DiscountsEditor from './Discounts';
+import { mergeSettings, effectivePriceDPL, DEFAULT_SETTINGS, type Discount, type Settings } from './geo';
 
 // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 // CONSTANTS
 // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
-const OSRM_BASE = 'https://router.project-osrm.org';
 const NOMINATIM_BASE = 'https://nominatim.openstreetmap.org';
 
 const DEFAULT_VEHICLES = [
@@ -111,7 +113,7 @@ function boundingBox(lat: number, lng: number, radiusKm: number) {
   };
 }
 // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
-// ROUTING \u2014 OSRM table (one call for N destinations), fallback to haversine\u00D71.3
+// ROUTING \u2014 openrouteservice matrix via /api/routematrix (one call for N destinations), fallback to haversine\u00D71.3 per entry
 // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 async function getRouteDistances(
   originLat: number,
@@ -133,11 +135,15 @@ async function getRouteDistances(
     const data = await res.json();
     if (data.error) throw new Error(data.error);
 
-    return (data.distances as number[]).map((m: number, i: number) => ({
-      km: m / 1000,
-      durationMins: (data.durations as number[])[i] / 60,
-      approx: false,
-    }));
+    return (data.distances as (number | null)[]).map((m, i) => {
+      const sec = (data.durations as (number | null)[])[i];
+      if (typeof m !== 'number' || typeof sec !== 'number') {
+        // Unroutable entry: straight-line estimate, marked approximate (spec \u00A76.3)
+        const km = haversineKm(originLat, originLng, destinations[i].lat, destinations[i].lng) * 1.3;
+        return { km, durationMins: (km / 35) * 60, approx: true };
+      }
+      return { km: m / 1000, durationMins: sec / 60, approx: false };
+    });
   } catch {
     // Fallback: haversine \u00D7 1.3, 35 km/h average
     return destinations.map((d: any) => {
@@ -191,6 +197,7 @@ async function fetchLiveStations(fuelType: string) {
     if (!s.lat || !s.lng) continue;
     seen.set(s.siteId, {
       id: s.siteId,
+      fuelId: s.fuelId,
       name: s.name || s.brand || 'Station',
       brand: s.brand || 'Independent',
       address: s.address || '',
@@ -208,6 +215,21 @@ async function fetchLiveStations(fuelType: string) {
   }
   return Array.from(seen.values()).filter(s => !isNaN(s.lat) && !isNaN(s.lng));
 }
+
+// Every station (any fuel), one row per site, for the discounts station picker (spec \u00A76.4)
+async function loadAllSites() {
+  const res = await fetch('/api/fuelproxy', { signal: AbortSignal.timeout(15000) });
+  if (!res.ok) throw new Error(`Proxy ${res.status}`);
+  const data = await res.json();
+  if (data.error) throw new Error(data.error);
+  const seen = new Map<number, { id: number; name: string; brand: string; suburb: string }>();
+  for (const s of (data.stations || [])) {
+    if (seen.has(s.siteId) || !s.lat || !s.lng) continue;
+    seen.set(s.siteId, { id: s.siteId, name: s.name || s.brand || 'Station', brand: s.brand || 'Independent', suburb: nearestSuburb(s.lat, s.lng, s.postcode || '') });
+  }
+  return Array.from(seen.values());
+}
+
 // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 // HELPERS
 // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
@@ -248,16 +270,25 @@ function uid() {
 
 function TabBar({ tab, setTab }) {
   const tabs = [
-    { id: 'find', icon: '\u26FD', label: 'Find Fuel' },
-    { id: 'garage', icon: '\uD83D\uDE97', label: 'My Garage' },
+    { id: 'find', icon: '\u26FD', label: 'Find' },
+    { id: 'trip', icon: '\uD83D\uDEE3', label: 'Trip' },
+    { id: 'garage', icon: '\uD83D\uDE97', label: 'Garage' },
     { id: 'settings', icon: '\u2699', label: 'Settings' },
   ];
   return (
-    <div
+    <nav
       style={{
+        position: 'fixed',
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 10,
         display: 'flex',
-        borderBottom: '1px solid #1f2937',
+        maxWidth: '480px',
+        margin: '0 auto',
+        borderTop: '1px solid #1f2937',
         background: '#0e1117',
+        paddingBottom: 'env(safe-area-inset-bottom)',
       }}
     >
       {tabs.map((t) => (
@@ -266,10 +297,11 @@ function TabBar({ tab, setTab }) {
           onClick={() => setTab(t.id)}
           style={{
             flex: 1,
-            padding: '12px 4px',
+            minHeight: '56px',
+            padding: '8px 4px',
             background: 'none',
             border: 'none',
-            borderBottom:
+            borderTop:
               tab === t.id ? '2px solid #f59e0b' : '2px solid transparent',
             color: tab === t.id ? '#f59e0b' : '#6b7280',
             fontFamily: "'Barlow Condensed', sans-serif",
@@ -288,7 +320,7 @@ function TabBar({ tab, setTab }) {
           {t.label}
         </button>
       ))}
-    </div>
+    </nav>
   );
 }
 
@@ -342,7 +374,7 @@ function StationCard({ s, rank, savings, nearestId }) {
           background: isCheapest ? '#f59e0b' : '#1f2937',
           color: isCheapest ? '#0e1117' : '#9ca3af',
           fontFamily: "'JetBrains Mono', monospace",
-          fontSize: '11px',
+          fontSize: '12px',
           fontWeight: 700,
           padding: '2px 7px',
           borderRadius: '2px',
@@ -366,7 +398,7 @@ function StationCard({ s, rank, savings, nearestId }) {
           <span
             style={{
               color: '#6b7280',
-              fontSize: '11px',
+              fontSize: '12px',
               fontWeight: 400,
               marginLeft: '8px',
             }}
@@ -398,11 +430,16 @@ function StationCard({ s, rank, savings, nearestId }) {
               lineHeight: 1,
             }}
           >
-            {fmtCPL(s.priceCPL)}
+            {fmtCPL(s.effCPL ?? s.priceCPL)}
           </div>
+          {s.discountCPL > 0 && (
+            <div style={{ fontSize: '12px', color: '#10b981' }}>
+              {'\u2212'}{s.discountCPL.toFixed(1)}c/L applied
+            </div>
+          )}
           <div
             style={{
-              fontSize: '10px',
+              fontSize: '12px',
               color: '#6b7280',
               fontFamily: "'Barlow Condensed', sans-serif",
               marginTop: '1px',
@@ -435,7 +472,7 @@ function StationCard({ s, rank, savings, nearestId }) {
           </div>
           <div
             style={{
-              fontSize: '10px',
+              fontSize: '12px',
               color: '#6b7280',
               fontFamily: "'Barlow Condensed', sans-serif",
               marginTop: '3px',
@@ -476,7 +513,7 @@ function StationCard({ s, rank, savings, nearestId }) {
             </div>
             <div
               style={{
-                fontSize: '9px',
+                fontSize: '12px',
                 color: '#6b7280',
                 fontFamily: "'Barlow Condensed', sans-serif",
                 letterSpacing: '0.08em',
@@ -511,7 +548,7 @@ function StationCard({ s, rank, savings, nearestId }) {
 
       {/* Last updated + Directions */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
-        <div style={{ fontSize: '10px', color: '#4b5563', fontFamily: "'Barlow Condensed', sans-serif" }}>
+        <div style={{ fontSize: '12px', color: '#4b5563', fontFamily: "'Barlow Condensed', sans-serif" }}>
           Price last changed {fmtDate(s.lastUpdate)} AEST
         </div>
         <a
@@ -525,7 +562,7 @@ function StationCard({ s, rank, savings, nearestId }) {
             borderRadius: '3px',
             color: '#9ca3af',
             fontFamily: "'Barlow Condensed', sans-serif",
-            fontSize: '11px',
+            fontSize: '12px',
             fontWeight: 600,
             letterSpacing: '0.05em',
             textDecoration: 'none',
@@ -601,7 +638,7 @@ function AddVehicleForm({ onSave, onCancel }) {
             <label
               style={{
                 display: 'block',
-                fontSize: '10px',
+                fontSize: '12px',
                 color: '#6b7280',
                 fontFamily: "'Barlow Condensed', sans-serif",
                 marginBottom: '3px',
@@ -624,7 +661,7 @@ function AddVehicleForm({ onSave, onCancel }) {
         <label
           style={{
             display: 'block',
-            fontSize: '10px',
+            fontSize: '12px',
             color: '#6b7280',
             fontFamily: "'Barlow Condensed', sans-serif",
             marginBottom: '3px',
@@ -653,7 +690,7 @@ function AddVehicleForm({ onSave, onCancel }) {
           <label
             style={{
               display: 'block',
-              fontSize: '10px',
+              fontSize: '12px',
               color: '#6b7280',
               fontFamily: "'Barlow Condensed', sans-serif",
               marginBottom: '3px',
@@ -676,7 +713,7 @@ function AddVehicleForm({ onSave, onCancel }) {
           <label
             style={{
               display: 'block',
-              fontSize: '10px',
+              fontSize: '12px',
               color: '#6b7280',
               fontFamily: "'Barlow Condensed', sans-serif",
               marginBottom: '3px',
@@ -697,7 +734,7 @@ function AddVehicleForm({ onSave, onCancel }) {
           <label
             style={{
               display: 'block',
-              fontSize: '10px',
+              fontSize: '12px',
               color: '#6b7280',
               fontFamily: "'Barlow Condensed', sans-serif",
               marginBottom: '3px',
@@ -786,8 +823,10 @@ export default function FuelSpy() {
   const [stationError, setStationError] = useState(null);
   const [isLiveData, setIsLiveData] = useState(false);  const [hasSearched, setHasSearched] = useState(false);
   const [showAddVehicle, setShowAddVehicle] = useState(false);
-  const [storageReady, setStorageReady] = useState(true);
+  const [storageReady, setStorageReady] = useState(false); // persist only after the stored settings are loaded
   const [nearestId, setNearestId] = useState(null);
+  const [settingsAll, setSettingsAll] = useState<Settings>(DEFAULT_SETTINGS);
+  const [discounts, setDiscountsState] = useState<Discount[]>([]);
 
   const selectedVehicle =
     vehicles.find((v) => v.id === selectedVehicleId) ?? vehicles[0];
@@ -827,12 +866,22 @@ export default function FuelSpy() {
               ? { value: localStorage.getItem('fuelspy-settings') }
               : null
           );
-          if (s?.value) {
-            const settings = JSON.parse(s.value);
-            if (settings.maxTravelMins) setMaxTravelMins(settings.maxTravelMins);
-            if (settings.fuelLevel) setFuelLevel(settings.fuelLevel);
-          }
-        } catch {}
+          // Merge stored settings over the defaults so no key is lost (spec \u00A76.4)
+          const merged = mergeSettings(s?.value ? JSON.parse(s.value) : null);
+          setSettingsAll(merged);
+          setMaxTravelMins(merged.maxTravelMins);
+          setFuelLevel(merged.fuelLevel);
+        } catch {
+          // unreadable settings: defaults stay
+        }
+
+        // Station discounts
+        try {
+          const d = localStorage.getItem('fuelspy-discounts');
+          if (d) setDiscountsState(JSON.parse(d));
+        } catch {
+          // unreadable discounts: start empty
+        }
       } finally {
         setStorageReady(true);
       }
@@ -865,11 +914,17 @@ export default function FuelSpy() {
   // \u2500\u2500 Persist settings \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
   useEffect(() => {
     if (!storageReady) return;
+    // Spread the whole settings object so Trip keys are never dropped (spec \u00A76.4)
     localStorage.setItem(
       'fuelspy-settings',
-      JSON.stringify({ maxTravelMins, fuelLevel })
+      JSON.stringify({ ...settingsAll, maxTravelMins, fuelLevel })
     );
-  }, [maxTravelMins, fuelLevel, storageReady]);
+  }, [maxTravelMins, fuelLevel, settingsAll, storageReady]);
+
+  const setDiscounts = (d: Discount[]) => {
+    setDiscountsState(d);
+    try { localStorage.setItem('fuelspy-discounts', JSON.stringify(d)); } catch { /* storage full or blocked */ }
+  };
 
   // \u2500\u2500 Geocode suburb/postcode input via Nominatim \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
   const getLocation = useCallback(async () => {
@@ -977,7 +1032,7 @@ export default function FuelSpy() {
         )
         .slice(0, 30);
 
-      // 4. Road distances (one OSRM table call with fallback)
+      // 4. Road distances (one openrouteservice matrix call via /api/routematrix, with straight-line fallback)
       const distResults = await getRouteDistances(
         location.lat,
         location.lng,
@@ -990,9 +1045,10 @@ export default function FuelSpy() {
         const roadKm    = distResults[i].km ?? haversineKm(location.lat, location.lng, s.lat, s.lng) * 1.3;
         const distApprox = distResults[i].approx;
         const travelMins = distResults[i].durationMins ?? (roadKm / 35) * 60;
-        const fillCost   = litresNeeded * s.priceDPL;
+        const eff        = effectivePriceDPL(s, litresNeeded, discounts);
+        const fillCost   = litresNeeded * eff.priceDPL;
 
-        const driveCost    = ((roadKm * 2 * selectedVehicle.consumption) / 100) * s.priceDPL;
+        const driveCost    = ((roadKm * 2 * selectedVehicle.consumption) / 100) * eff.priceDPL;
 
         return {
           ...s,
@@ -1000,6 +1056,8 @@ export default function FuelSpy() {
           distApprox,
           travelMins,
           litresNeeded,
+          effCPL: eff.priceDPL * 100,
+          discountCPL: eff.discountCPL,
           fillCost,
           drivingCost: driveCost,
           totalCost: fillCost + driveCost,
@@ -1023,7 +1081,7 @@ export default function FuelSpy() {
     } finally {
       setStationLoading(false);
     }
-  }, [location, selectedVehicle, fuelLevel, maxTravelMins, getLocation]);
+  }, [location, selectedVehicle, fuelLevel, maxTravelMins, getLocation, discounts]);
 
   // \u2500\u2500 Save token \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 
@@ -1032,13 +1090,89 @@ export default function FuelSpy() {
   // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
   const sectionLabel = {
     fontFamily: "'Barlow Condensed', sans-serif",
-    fontSize: '11px',
+    fontSize: '12px',
     fontWeight: 700,
     letterSpacing: '0.1em',
     color: '#6b7280',
     textTransform: 'uppercase',
     marginBottom: '8px',
   };
+
+  // Vehicle and fuel level: shared by the Find and Trip tabs
+  const vehicleAndFuel = (
+    <>
+              {/* Vehicle selector */}
+              <div style={{ marginBottom: '16px' }}>
+                <div style={sectionLabel}>Vehicle</div>
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: '8px',
+                    overflowX: 'auto',
+                    paddingBottom: '4px',
+                  }}
+                >
+                  {vehicles.map((v) => (
+                    <VehiclePill
+                      key={v.id}
+                      v={v}
+                      selected={selectedVehicle?.id === v.id}
+                      onClick={() => setSelectedVehicleId(v.id)}
+                    />
+                  ))}
+                </div>
+                {selectedVehicle && (
+                  <div
+                    style={{
+                      marginTop: '8px',
+                      fontSize: '12px',
+                      color: '#6b7280',
+                    }}
+                  >
+                    Tank:{' '}
+                    <span style={{ color: '#9ca3af' }}>
+                      {selectedVehicle.tankL}L
+                    </span>
+                    &nbsp;{'\u00B7'}&nbsp;Consumption:{' '}
+                    <span style={{ color: '#9ca3af' }}>
+                      {selectedVehicle.consumption} L/100km
+                    </span>
+                    &nbsp;{'\u00B7'}&nbsp;Fuel:{' '}
+                    <span style={{ color: '#9ca3af' }}>
+                      {selectedVehicle.fuelType}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Fuel level */}
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <div style={sectionLabel}>Current Fuel Level</div>
+                  <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '14px', color: '#f59e0b' }}>
+                    {['Empty','\u215B','\u00BC','\u215C','\u00BD','\u215D','\u00BE','\u215E','Full'][Math.round(fuelLevel * 8)]}
+                    {selectedVehicle && fuelLevel < 1 && (
+                      <span style={{ fontSize: '12px', color: '#9ca3af', marginLeft: '6px' }}>
+                        ({(selectedVehicle.tankL * (1 - fuelLevel)).toFixed(0)}L to fill)
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="8"
+                  step="1"
+                  value={Math.round(fuelLevel * 8)}
+                  onChange={(e) => setFuelLevel(Number(e.target.value) / 8)}
+                  style={{ width: '100%', accentColor: '#f59e0b' }}
+                />
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+                  <span>Empty</span><span>{'\u00BD'}</span><span>Full</span>
+                </div>
+              </div>
+    </>
+  );
 
   const nearestStation = stations.find((s) => s.id === nearestId);
   const nearestTotalCost = nearestStation?.totalCost ?? 0;
@@ -1048,18 +1182,15 @@ export default function FuelSpy() {
   // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
   return (
     <>
-      <link
-        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Barlow+Condensed:wght@300;400;600;700&display=swap"
-        rel="stylesheet"
-      />
       <div
         style={{
           background: '#0e1117',
-          minHeight: '100vh',
+          minHeight: '100dvh',
           color: '#f3f4f6',
           fontFamily: "'Barlow Condensed', sans-serif",
           maxWidth: '480px',
           margin: '0 auto',
+          paddingTop: 'env(safe-area-inset-top)',
         }}
       >
         {/* Header */}
@@ -1085,7 +1216,7 @@ export default function FuelSpy() {
               </div>
               <div
                 style={{
-                  fontSize: '10px',
+                  fontSize: '12px',
                   color: '#6b7280',
                   letterSpacing: '0.1em',
                 }}
@@ -1101,7 +1232,7 @@ export default function FuelSpy() {
                   border: '1px solid #10b98144',
                   borderRadius: '3px',
                   padding: '3px 8px',
-                  fontSize: '10px',
+                  fontSize: '12px',
                   color: '#10b981',
                   letterSpacing: '0.08em',
                 }}
@@ -1117,7 +1248,7 @@ export default function FuelSpy() {
                   border: '1px solid #f59e0b44',
                   borderRadius: '3px',
                   padding: '3px 8px',
-                  fontSize: '10px',
+                  fontSize: '12px',
                   color: '#f59e0b',
                   letterSpacing: '0.08em',
                 }}
@@ -1132,7 +1263,7 @@ export default function FuelSpy() {
         <TabBar tab={tab} setTab={setTab} />
 
         {/* Content */}
-        <div style={{ padding: '16px', overflowY: 'auto' }}>
+        <div style={{ padding: '16px', paddingBottom: 'calc(88px + env(safe-area-inset-bottom))', overflowY: 'auto' }}>
           {/* \u2500\u2500\u2500 FIND FUEL TAB \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */}
           {tab === 'find' && (
             <div>
@@ -1140,7 +1271,7 @@ export default function FuelSpy() {
               {/* Location */}
               <div style={{ marginBottom: '16px' }}>
                 <div style={sectionLabel}>Your Location</div>
-                <div style={{ display: 'flex', gap: '6px' }}>
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                   <input
                     type="text"
                     value={locInput}
@@ -1149,13 +1280,14 @@ export default function FuelSpy() {
                     placeholder={'Suburb or postcode\u2026'}
                     style={{
                       flex: 1,
+                      minWidth: 0,
                       background: '#111827',
                       border: '1px solid #374151',
                       borderRadius: '4px',
                       color: '#f3f4f6',
                       padding: '10px 12px',
                       fontFamily: "'Barlow Condensed', sans-serif",
-                      fontSize: '15px',
+                      fontSize: '16px',
                       outline: 'none',
                     }}
                   />
@@ -1216,7 +1348,7 @@ export default function FuelSpy() {
                         background: 'none',
                         border: 'none',
                         color: '#6b7280',
-                        fontSize: '11px',
+                        fontSize: '12px',
                         cursor: 'pointer',
                         padding: 0,
                       }}
@@ -1238,76 +1370,8 @@ export default function FuelSpy() {
                 )}
               </div>
 
-              {/* Vehicle selector */}
-              <div style={{ marginBottom: '16px' }}>
-                <div style={sectionLabel}>Vehicle</div>
-                <div
-                  style={{
-                    display: 'flex',
-                    gap: '8px',
-                    overflowX: 'auto',
-                    paddingBottom: '4px',
-                  }}
-                >
-                  {vehicles.map((v) => (
-                    <VehiclePill
-                      key={v.id}
-                      v={v}
-                      selected={selectedVehicle?.id === v.id}
-                      onClick={() => setSelectedVehicleId(v.id)}
-                    />
-                  ))}
-                </div>
-                {selectedVehicle && (
-                  <div
-                    style={{
-                      marginTop: '8px',
-                      fontSize: '11px',
-                      color: '#6b7280',
-                    }}
-                  >
-                    Tank:{' '}
-                    <span style={{ color: '#9ca3af' }}>
-                      {selectedVehicle.tankL}L
-                    </span>
-                    &nbsp;{'\u00B7'}&nbsp;Consumption:{' '}
-                    <span style={{ color: '#9ca3af' }}>
-                      {selectedVehicle.consumption} L/100km
-                    </span>
-                    &nbsp;{'\u00B7'}&nbsp;Fuel:{' '}
-                    <span style={{ color: '#9ca3af' }}>
-                      {selectedVehicle.fuelType}
-                    </span>
-                  </div>
-                )}
-              </div>
+              {vehicleAndFuel}
 
-              {/* Fuel level */}
-              <div style={{ marginBottom: '16px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <div style={sectionLabel}>Current Fuel Level</div>
-                  <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '14px', color: '#f59e0b' }}>
-                    {['Empty','\u215B','\u00BC','\u215C','\u00BD','\u215D','\u00BE','\u215E','Full'][Math.round(fuelLevel * 8)]}
-                    {selectedVehicle && fuelLevel < 1 && (
-                      <span style={{ fontSize: '11px', color: '#9ca3af', marginLeft: '6px' }}>
-                        ({(selectedVehicle.tankL * (1 - fuelLevel)).toFixed(0)}L to fill)
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="8"
-                  step="1"
-                  value={Math.round(fuelLevel * 8)}
-                  onChange={(e) => setFuelLevel(Number(e.target.value) / 8)}
-                  style={{ width: '100%', accentColor: '#f59e0b' }}
-                />
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#6b7280', marginTop: '4px' }}>
-                  <span>Empty</span><span>{'\u00BD'}</span><span>Full</span>
-                </div>
-              </div>
               {/* Max Travel Time */}
               <div style={{ marginBottom: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
@@ -1325,10 +1389,10 @@ export default function FuelSpy() {
                   onChange={(e) => setMaxTravelMins(Number(e.target.value))}
                   style={{ width: '100%', accentColor: '#f59e0b' }}
                 />
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#6b7280' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#6b7280' }}>
                   <span>5 min</span><span>30 min</span><span>60 min</span>
                 </div>
-                <div style={{ fontSize: '10px', color: '#4b5563', marginTop: '4px' }}>
+                <div style={{ fontSize: '12px', color: '#4b5563', marginTop: '4px' }}>
                   Filters by actual road travel time. Sorted by total cost.
                 </div>
               </div>
@@ -1391,7 +1455,7 @@ export default function FuelSpy() {
                     <div style={sectionLabel}>
                       {stations.length} STATIONS FOUND
                     </div>
-                    <div style={{ fontSize: '10px', color: '#6b7280' }}>
+                    <div style={{ fontSize: '12px', color: '#6b7280' }}>
                       {stations.some((s) => s.distApprox)
                         ? '~ = est. distance'
                         : 'Road distances'}
@@ -1400,7 +1464,7 @@ export default function FuelSpy() {
                   {selectedVehicle && (
                     <div
                       style={{
-                        fontSize: '11px',
+                        fontSize: '12px',
                         color: '#6b7280',
                         marginBottom: '8px',
                       }}
@@ -1427,6 +1491,21 @@ export default function FuelSpy() {
               ))}
             </div>
           )}
+
+          {/* TRIP TAB \u2014 fuel along the way (spec \u00A75) */}
+          {/* Kept mounted so From, To and results survive a tab switch */}
+          <div style={{ display: tab === 'trip' ? 'block' : 'none' }}>
+            <TripTab
+              vehicle={selectedVehicle}
+              fuelLevel={fuelLevel}
+              discounts={discounts}
+              settings={settingsAll}
+              setSettings={setSettingsAll}
+              loadStations={fetchLiveStations}
+              vehicleAndFuel={vehicleAndFuel}
+              sectionLabel={sectionLabel}
+            />
+          </div>
 
           {/* \u2500\u2500\u2500 GARAGE TAB \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */}
           {tab === 'garage' && (
@@ -1506,7 +1585,7 @@ export default function FuelSpy() {
                       </div>
                       <div
                         style={{
-                          fontSize: '11px',
+                          fontSize: '12px',
                           color: '#4b5563',
                           marginTop: '3px',
                         }}
@@ -1541,7 +1620,7 @@ export default function FuelSpy() {
                           borderRadius: '3px',
                           color: '#9ca3af',
                           fontFamily: "'Barlow Condensed', sans-serif",
-                          fontSize: '11px',
+                          fontSize: '12px',
                           cursor: 'pointer',
                         }}
                       >
@@ -1556,7 +1635,7 @@ export default function FuelSpy() {
                           borderRadius: '3px',
                           color: '#ef444488',
                           fontFamily: "'Barlow Condensed', sans-serif",
-                          fontSize: '11px',
+                          fontSize: '12px',
                           cursor: 'pointer',
                         }}
                       >
@@ -1581,6 +1660,15 @@ export default function FuelSpy() {
                 )}
               </div>
             </div>
+          )}
+
+          {tab === 'garage' && (
+            <DiscountsEditor
+              discounts={discounts}
+              setDiscounts={setDiscounts}
+              loadSites={loadAllSites}
+              sectionLabel={sectionLabel}
+            />
           )}
 
           {/* \u2500\u2500\u2500 SETTINGS TAB \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */}
@@ -1645,14 +1733,17 @@ export default function FuelSpy() {
                     Data: Queensland Government Fuel Price Reporting Scheme
                   </div>
                   <div>
-                    Routing: OSRM (road distance) with haversine fallback
+                    Routing: openrouteservice (road distance and routes), straight-line estimate if unavailable
                   </div>
                   <div>
                     Savings calculated as: total fill cost + round-trip drive
                     cost vs. nearest servo
                   </div>
-                  <div style={{ marginTop: '8px', color: '#4b5563' }}>
-                    Phase 2: route-based fuel lookup (NSW FuelCheck style)
+                  <div style={{ marginTop: '8px' }}>
+                    Trip: enter where you're going and how far you'll go out of your way; servos along the route are ranked by fill cost plus the fuel used on the detour.
+                  </div>
+                  <div style={{ marginTop: '8px', color: '#6b7280' }}>
+                    {'\u00A9'} openrouteservice by HeiGIT | Data from OpenStreetMap
                   </div>
                 </div>
               </div>

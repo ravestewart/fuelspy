@@ -10,7 +10,22 @@ function toArray(val) {
   return [];
 }
 
+// The upstream JSON body is cached for 5 minutes (spec §6.3). CORS headers are added per request
+// by functions/api/_middleware.js, after the cache, so a cached copy never carries another caller's header.
+const CACHE_SECONDS = 300;
+const CACHE_KEY = 'https://fuelspy-cache.internal/fuelproxy/v1';
+
 export async function onRequest(context) {
+  const cache = typeof caches !== 'undefined' ? caches.default : null;
+  if (cache) {
+    const hit = await cache.match(CACHE_KEY);
+    if (hit) {
+      return new Response(await hit.text(), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': `max-age=${CACHE_SECONDS}`, 'X-FuelSpy-Cache': 'HIT' },
+      });
+    }
+  }
   const TOKEN = context.env.FUELSPY_TOKEN;
   if (!TOKEN) {
     return new Response(JSON.stringify({ error: 'API token not configured' }), {
@@ -74,12 +89,15 @@ export async function onRequest(context) {
       });
     }
 
-    return new Response(JSON.stringify({ stations, fuelTypes: fuelArr, timestamp: new Date().toISOString() }), {
+    const body = JSON.stringify({ stations, fuelTypes: fuelArr, timestamp: new Date().toISOString() });
+    if (cache) {
+      context.waitUntil(cache.put(CACHE_KEY, new Response(body, {
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': `max-age=${CACHE_SECONDS}` },
+      })));
+    }
+    return new Response(body, {
       status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*'
-      }
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': `max-age=${CACHE_SECONDS}`, 'X-FuelSpy-Cache': 'MISS' },
     });
   } catch (err) {
     return new Response(JSON.stringify({ error: err.message }), {

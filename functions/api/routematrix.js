@@ -61,15 +61,13 @@ export async function onRequestPost(context) {
 
     return new Response(
       JSON.stringify({
-        distances: data.distances[0],
-        durations: data.durations[0],
+        // ORS returns null for a destination it cannot route to; pass null through (spec §6.3).
+        distances: data.distances[0].map((v) => (typeof v === 'number' ? v : null)),
+        durations: data.durations[0].map((v) => (typeof v === 'number' ? v : null)),
       }),
       {
         status: 200,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
+        headers: { 'Content-Type': 'application/json' },
       }
     );
   } catch (err) {
