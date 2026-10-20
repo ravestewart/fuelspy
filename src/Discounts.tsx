@@ -85,7 +85,7 @@ export default function DiscountsEditor(props: {
               ))}
             </>
           ) : (
-            <div style={{ fontSize: '14px', color: '#10b981' }}>{'✓'} {site.brand} {site.name} · {site.suburb} <button onClick={() => setSite(null)} style={{ ...button(false), marginLeft: '8px', minHeight: '36px', padding: '4px 10px' }}>change</button></div>
+            <div style={{ fontSize: '14px', color: '#10b981' }}>{'✓'} {site.brand} {site.name} · {site.suburb} <button onClick={() => setSite(null)} style={{ ...button(false), marginLeft: '8px', minHeight: '44px', padding: '4px 12px' }}>change</button></div>
           )}
           <label style={{ fontSize: '13px', color: '#9ca3af' }}>Cents off per litre
             <input inputMode="decimal" value={cents} onChange={(e) => setCents(e.target.value)} style={field} />

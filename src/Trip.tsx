@@ -74,10 +74,18 @@ export default function TripTab(props: {
   const [baseline, setBaseline] = useState<number | null>(null);
   const [checkedLabel, setCheckedLabel] = useState<string>('');
   const [unchecked, setUnchecked] = useState<Station[]>([]);
+  const [planFullTank, setPlanFullTank] = useState(false); // fixed at Plan time, so the saving line matches the results shown
+  const [planKey, setPlanKey] = useState<string | null>(null); // the inputs the shown results were planned with
 
   const mode = settings.tripDetourMode;
   const limit = mode === 'min' ? settings.tripDetourMins : settings.tripDetourKm;
   const limitText = mode === 'min' ? `${limit} min` : `${limit} km`;
+
+  // Results are for the inputs at Plan time. When the vehicle, fuel level, discounts or detour settings
+  // change, the results are hidden, so no card shows totals or savings for inputs that are no longer set.
+  // A plan still running when an input changes finishes hidden for the same reason.
+  const inputsKey = JSON.stringify([vehicle?.tankL, vehicle?.consumption, vehicle?.fuelType, fuelLevel, discounts, mode, limit, settings.tripAvoidTolls]);
+  const isCurrent = planKey === inputsKey;
 
   async function resolve(which: 'start' | 'dest') {
     const text = (which === 'start' ? startText : destText).trim();
@@ -102,6 +110,7 @@ export default function TripTab(props: {
 
   async function plan() {
     if (!start || !dest || !vehicle) return;
+    setPlanKey(inputsKey);
     setError(null); setNote(null); setResults([]); setUnchecked([]); setBaseline(null); setCheckedLabel(''); setRouteInfo(null);
     const avoidTolls = settings.tripAvoidTolls;
     try {
@@ -128,7 +137,10 @@ export default function TripTab(props: {
       const box = { minLat: Math.min(...lats) - padLat, maxLat: Math.max(...lats) + padLat, minLng: Math.min(...lngs) - padLng, maxLng: Math.max(...lngs) + padLng };
       const litres = vehicle.tankL * (1 - fuelLevel);
       const fullTank = litres < 1;
-      if (fullTank) setNote('Tank is full — set your fuel level. Ranked by detour cost, then price.');
+      setPlanFullTank(fullTank);
+      const notes: string[] = [];
+      if (fullTank) notes.push('Tank is full — set your fuel level. Ranked by detour cost, then price.');
+      setNote(notes.length ? notes.join(' ') : null);
       const corridor = all
         .filter((s) => s.lat > box.minLat && s.lat < box.maxLat && s.lng > box.minLng && s.lng < box.maxLng)
         .map((s) => ({ s, proj: projectToRoute(ri, s) }))
@@ -143,7 +155,7 @@ export default function TripTab(props: {
       // 3. Detours, in lower-bound order, 25 per call, at most 4 calls; stop early when no better total is possible.
       setStage('Checking detours…');
       const kept: Result[] = [];
-      let best: number | null = null, checked = 0, calls = 0, stopped = false, unrouted = 0;
+      let best: number | null = null, checked = 0, calls = 0, stopped = false, unrouted = 0, routed = 0;
       for (let i = 0; i < corridor.length; i += LEGS_PER_CALL) {
         if (shouldStop(corridor[i].bound, best, fullTank)) { stopped = true; break; }
         if (calls >= MAX_CALLS) break;
@@ -164,21 +176,26 @@ export default function TripTab(props: {
         }
         checked += batch.length;
         unrouted += d.unresolved || 0;
+        const batchAllNull = d.detours.every((x: unknown) => x === null);
         batch.forEach(({ s, eff }, k) => {
           const det = d.detours[k];
           if (!det) return;
+          routed++;
           const extraMin = det.extra_s / 60, extraKm = det.extra_m / 1000;
           if ((mode === 'min' ? extraMin : extraKm) > limit) return;
           const t = tripTotal(litres, eff.priceDPL, extraKm, vehicle.consumption);
           kept.push({ ...s, effDPL: eff.priceDPL, discountCPL: eff.discountCPL, extraMin, extraKm, ...t });
           if (!fullTank && (best === null || t.total < best)) best = t.total;
         });
+        if (batchAllNull) break; // nothing in this batch could be routed: don't spend more calls on the next
       }
       const ranOut = !stopped && checked < corridor.length;
       if (ranOut) setCheckedLabel(`best of ${checked} checked`);
-      if (unrouted) setNote(`${unrouted} servo${unrouted === 1 ? '' : 's'} couldn't be routed and ${unrouted === 1 ? 'was' : 'were'} skipped.`);
+      if (unrouted) notes.push(`${unrouted} servo${unrouted === 1 ? '' : 's'} couldn't be routed and ${unrouted === 1 ? 'was' : 'were'} skipped.`);
+      setNote(notes.length ? notes.join(' ') : null);
       if (!kept.length) {
-        setError(ranOut ? `No servo in the ${checked} checked is within ${limitText} — try a bigger detour.` : `No servos within ${limitText} of your route — try a bigger detour.`);
+        const noneRouted = checked > 0 && routed === 0;
+        setError(noneRouted ? `None of the ${checked} servos checked could be routed — try again later.` : ranOut ? `No servo in the ${checked} checked is within ${limitText} — try a bigger detour.` : `No servos within ${limitText} of your route — try a bigger detour.`);
         return;
       }
       kept.sort(tripCompare(fullTank));
@@ -194,7 +211,7 @@ export default function TripTab(props: {
   }
 
   const set = (patch: Partial<Settings>) => setSettings({ ...settings, ...patch });
-  const fullTank = vehicle ? vehicle.tankL * (1 - fuelLevel) < 1 : false;
+  const fullTank = planFullTank;
 
   return (
     <div>
@@ -245,27 +262,30 @@ export default function TripTab(props: {
         {stage ? stage.toUpperCase() : !start || !dest ? 'SET FROM AND TO' : 'PLAN FUEL STOP'}
       </button>
 
-      {note && <div style={{ fontSize: '13px', color: '#f59e0b', marginBottom: '10px' }}>{note}</div>}
-      {routeInfo && (
+      {planKey !== null && !isCurrent && !stage && (
+        <div style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '10px' }}>Vehicle, fuel level, discounts or detour changed — press Plan for new results.</div>
+      )}
+      {isCurrent && note && <div style={{ fontSize: '13px', color: '#f59e0b', marginBottom: '10px' }}>{note}</div>}
+      {isCurrent && routeInfo && (
         <div style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '10px' }}>
           Route {routeInfo.km.toFixed(1)} km · {Math.round(routeInfo.min)} min{settings.tripAvoidTolls ? ' · avoiding tolls' : ''}
           {checkedLabel && <span style={{ color: '#f59e0b' }}> · {checkedLabel}</span>}
         </div>
       )}
-      {error && (
+      {isCurrent && error && (
         <div style={{ background: '#450a0a', border: '1px solid #7f1d1d', borderRadius: '4px', padding: '12px', marginBottom: '12px', fontSize: '13px', color: '#fca5a5' }}>
           {error}
         </div>
       )}
 
-      {unchecked.map((s) => (
+      {isCurrent && unchecked.map((s) => (
         <div key={s.id} style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: '4px', padding: '12px', marginBottom: '8px' }}>
           <div style={{ fontWeight: 700, fontSize: '16px' }}>{s.brand} <span style={{ fontWeight: 400, color: '#9ca3af', fontSize: '13px' }}>{s.name}</span></div>
           <div style={{ fontSize: '13px', color: '#9ca3af' }}>{s.suburb} · {s.priceCPL.toFixed(1)}¢ · detours not checked</div>
         </div>
       ))}
 
-      {results.map((r, i) => {
+      {isCurrent && results.map((r, i) => {
         const saving = baseline === null ? 0 : baseline - (fullTank ? r.detour : r.total);
         return (
           <div key={r.id} style={{ background: '#111827', border: `1px solid ${i === 0 ? '#f59e0b44' : '#1f2937'}`, borderLeft: `4px solid ${saving > 0.005 ? '#10b981' : '#6b7280'}`, borderRadius: '4px', padding: '14px', marginBottom: '8px', position: 'relative' }}>
@@ -310,7 +330,7 @@ export default function TripTab(props: {
         );
       })}
 
-      {(results.length > 0 || error || routeInfo) && (
+      {isCurrent && (results.length > 0 || error || routeInfo) && (
         <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '8px' }}>{ATTRIBUTION}</div>
       )}
     </div>

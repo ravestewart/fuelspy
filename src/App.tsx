@@ -823,7 +823,7 @@ export default function FuelSpy() {
   const [stationError, setStationError] = useState(null);
   const [isLiveData, setIsLiveData] = useState(false);  const [hasSearched, setHasSearched] = useState(false);
   const [showAddVehicle, setShowAddVehicle] = useState(false);
-  const [storageReady, setStorageReady] = useState(true);
+  const [storageReady, setStorageReady] = useState(false); // persist only after the stored settings are loaded
   const [nearestId, setNearestId] = useState(null);
   const [settingsAll, setSettingsAll] = useState<Settings>(DEFAULT_SETTINGS);
   const [discounts, setDiscountsState] = useState<Discount[]>([]);
@@ -1032,7 +1032,7 @@ export default function FuelSpy() {
         )
         .slice(0, 30);
 
-      // 4. Road distances (one OSRM table call with fallback)
+      // 4. Road distances (one openrouteservice matrix call via /api/routematrix, with straight-line fallback)
       const distResults = await getRouteDistances(
         location.lat,
         location.lng,
@@ -1271,7 +1271,7 @@ export default function FuelSpy() {
               {/* Location */}
               <div style={{ marginBottom: '16px' }}>
                 <div style={sectionLabel}>Your Location</div>
-                <div style={{ display: 'flex', gap: '6px' }}>
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                   <input
                     type="text"
                     value={locInput}
@@ -1280,13 +1280,14 @@ export default function FuelSpy() {
                     placeholder={'Suburb or postcode\u2026'}
                     style={{
                       flex: 1,
+                      minWidth: 0,
                       background: '#111827',
                       border: '1px solid #374151',
                       borderRadius: '4px',
                       color: '#f3f4f6',
                       padding: '10px 12px',
                       fontFamily: "'Barlow Condensed', sans-serif",
-                      fontSize: '15px',
+                      fontSize: '16px',
                       outline: 'none',
                     }}
                   />
@@ -1492,7 +1493,8 @@ export default function FuelSpy() {
           )}
 
           {/* TRIP TAB \u2014 fuel along the way (spec \u00A75) */}
-          {tab === 'trip' && (
+          {/* Kept mounted so From, To and results survive a tab switch */}
+          <div style={{ display: tab === 'trip' ? 'block' : 'none' }}>
             <TripTab
               vehicle={selectedVehicle}
               fuelLevel={fuelLevel}
@@ -1503,7 +1505,7 @@ export default function FuelSpy() {
               vehicleAndFuel={vehicleAndFuel}
               sectionLabel={sectionLabel}
             />
-          )}
+          </div>
 
           {/* \u2500\u2500\u2500 GARAGE TAB \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */}
           {tab === 'garage' && (

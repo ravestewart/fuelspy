@@ -24,4 +24,4 @@ Build locally: `npm ci && npm run build`. Unit checks for the maths: `node --exp
 
 ## Routing service
 
-openrouteservice, free Standard plan ("Free to use for everyone"): 2,000 route lookups and 500 distance matrices a day. Results must show "© openrouteservice by HeiGIT | Data from OpenStreetMap" (Settings tab and Trip results).
+openrouteservice (HeiGIT), on the free Standard plan. Its daily and per-minute limits for Directions and Matrix are on the plans page: https://account.heigit.org/info/plans. Each `/api/detours` response reports `orsCalls`, the matrix calls it used. The terms (https://account.heigit.org/info/tos) require results to show "© openrouteservice by HeiGIT | Data from OpenStreetMap" (Settings tab and Trip results).

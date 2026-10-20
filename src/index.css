@@ -42,16 +42,53 @@ input[type='range'] {
   min-height: 44px;
 }
 
+/* Custom slider so the thumb's touch area is 44 px (spec F3, §6.1). The visible dot is 20 px; the
+   transparent 12 px border is part of the thumb, so it still takes the touch. */
 input[type='range'] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
   accent-color: #f59e0b;
+  cursor: pointer;
+}
+
+input[type='range']::-webkit-slider-runnable-track {
+  height: 6px;
+  background: #374151;
+  border-radius: 3px;
+}
+
+input[type='range']::-moz-range-track {
+  height: 6px;
+  background: #374151;
+  border-radius: 3px;
+}
+
+input[type='range']::-moz-range-progress {
+  height: 6px;
+  background: #f59e0b;
+  border-radius: 3px;
 }
 
 input[type='range']::-webkit-slider-thumb {
-  width: 28px;
-  height: 28px;
+  -webkit-appearance: none;
+  appearance: none;
+  box-sizing: border-box;
+  width: 44px;
+  height: 44px;
+  margin-top: -19px;
+  border-radius: 50%;
+  background: #f59e0b;
+  background-clip: padding-box;
+  border: 12px solid transparent;
 }
 
 input[type='range']::-moz-range-thumb {
-  width: 28px;
-  height: 28px;
+  box-sizing: border-box;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #f59e0b;
+  background-clip: padding-box;
+  border: 12px solid transparent;
 }
